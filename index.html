@@ -1,0 +1,6261 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Вагоны — учёт товара (офлайн)</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#15140F">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Вагоны">
+
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+
+<style>
+  :root{
+    --bg:#15140F;
+    --surface:#1E1C15;
+    --surface-2:#262319;
+    --line:#3A362A;
+    --ink:#F0EBDD;
+    --ink-muted:#9B9585;
+    --amber:#E8A33D;
+    --amber-dim:#8C6222;
+    --brick:#C1443A;
+    --brick-dim:#5A241F;
+    --teal:#5FA88A;
+  }
+
+  :root[data-theme="light"]{
+    --bg:#F7F4EC;
+    --surface:#FFFFFF;
+    --surface-2:#EFEADD;
+    --line:#DCD5C2;
+    --ink:#211E15;
+    --ink-muted:#7A7462;
+    --amber:#B9740E;
+    --amber-dim:#E7CFA0;
+    --brick:#AE3A2C;
+    --brick-dim:#EFC7BF;
+    --teal:#2E7D62;
+  }
+
+  *{box-sizing:border-box;}
+
+  html,body{
+    margin:0;
+    padding:0;
+  }
+
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:-apple-system,system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+    padding-bottom:48px;
+    transition:background-color .15s ease,color .15s ease;
+  }
+
+  .mono{
+    font-family:ui-monospace,monospace;
+    font-variant-numeric:tabular-nums;
+  }
+
+  button{
+    font-family:inherit;
+  }
+
+  /* ---------- Topbar ---------- */
+
+  .topbar{
+    position:sticky;
+    top:0;
+    z-index:10;
+    background:var(--bg);
+    border-bottom:1px solid var(--line);
+    padding:14px 12px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+
+  .icon-plain{
+    background:transparent;
+    border:1px solid var(--line);
+    color:var(--ink);
+    border-radius:7px;
+    font-size:17px;
+    padding:6px 10px;
+    cursor:pointer;
+    line-height:1;
+    flex-shrink:0;
+  }
+
+  .icon-plain:hover{
+    border-color:var(--amber-dim);
+  }
+
+  .icon-plain:active{
+    border-color:var(--amber);
+    color:var(--amber);
+  }
+
+  .topbar-title-wrap{
+    min-width:0;
+    flex:1;
+  }
+
+  .topbar-title-input,
+  .topbar-title-static{
+    background:transparent;
+    border:none;
+    color:var(--ink);
+    font-family:-apple-system,sans-serif;
+    font-size:19px;
+    font-weight:600;
+    letter-spacing:.01em;
+    padding:2px 0;
+    width:100%;
+    border-bottom:1px solid transparent;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  .topbar-title-input:focus{
+    outline:none;
+    border-bottom:1px solid var(--amber-dim);
+  }
+
+  .topbar-title-wrap small{
+    display:block;
+    font-size:11px;
+    font-weight:400;
+    color:var(--ink-muted);
+    margin-top:2px;
+  }
+
+  .topbar-right{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-shrink:0;
+  }
+
+  /* ---------- Search ---------- */
+
+  .search-bar{
+    position:sticky;
+    top:57px;
+    z-index:9;
+    background:var(--bg);
+    padding:10px 12px 6px;
+  }
+
+  .search-bar input{
+    width:100%;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:9px;
+    color:var(--ink);
+    font-size:14px;
+    padding:10px 12px;
+  }
+
+  .search-bar input::placeholder{
+    color:var(--ink-muted);
+  }
+
+  .search-bar input:focus{
+    outline:none;
+    border-color:var(--amber-dim);
+  }
+
+  #list{
+    padding:4px 12px 0;
+  }
+
+  .empty{
+    text-align:center;
+    color:var(--ink-muted);
+    padding:60px 20px;
+    font-size:14px;
+    line-height:1.6;
+  }
+
+  /* ---------- Items ---------- */
+
+  .item{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:12px 14px 14px;
+    margin:10px 0;
+  }
+
+  .item-head{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:10px;
+  }
+
+  .item-name{
+    flex:1;
+    background:transparent;
+    border:none;
+    color:var(--ink);
+    font-size:16px;
+    font-weight:600;
+    padding:2px 0;
+    min-width:0;
+    border-bottom:1px solid transparent;
+  }
+
+  .item-name:focus{
+    outline:none;
+    border-bottom:1px solid var(--amber-dim);
+  }
+
+  .icon-btn{
+    background:transparent;
+    border:none;
+    color:var(--ink-muted);
+    font-size:16px;
+    padding:4px 6px;
+    cursor:pointer;
+    line-height:1;
+  }
+
+  .icon-btn:active{
+    color:var(--brick);
+  }
+
+  .confirm-del-btn{
+    color:var(--brick);
+    font-size:12px;
+    border:1px solid var(--brick-dim);
+    border-radius:6px;
+    padding:4px 8px;
+  }
+
+  .cancel-del-btn{
+    font-size:14px;
+  }
+
+  .field-row{
+    display:flex;
+    gap:10px;
+    margin-bottom:8px;
+  }
+
+  .field{
+    flex:1;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    border-radius:7px;
+    padding:6px 10px;
+  }
+
+  .field label{
+    font-size:11px;
+    color:var(--ink-muted);
+  }
+
+  .field input{
+    width:64px;
+    text-align:right;
+    background:transparent;
+    border:none;
+    color:var(--ink);
+    font-family:ui-monospace,monospace;
+    font-size:14px;
+  }
+
+  .field input:focus{
+    outline:none;
+  }
+
+  /* ---------- Restock ---------- */
+
+  .restock-section{
+    margin:2px 0 10px;
+    padding:8px 10px;
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    border-radius:7px;
+  }
+
+  .restock-title{
+    font-size:11px;
+    color:var(--ink-muted);
+    margin-bottom:6px;
+  }
+
+  .restock-chips{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    margin-bottom:8px;
+  }
+
+  .restock-chips:empty{
+    display:none;
+    margin:0;
+  }
+
+  .chip{
+    display:flex;
+    align-items:center;
+    gap:5px;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:999px;
+    padding:4px 6px 4px 10px;
+    font-size:12px;
+    color:var(--ink);
+  }
+
+  .chip b{
+    font-family:ui-monospace,monospace;
+    color:var(--teal);
+  }
+
+  .chip .chip-x{
+    background:transparent;
+    border:none;
+    color:var(--ink-muted);
+    font-size:13px;
+    cursor:pointer;
+    padding:0 4px;
+  }
+
+  .chip .chip-x:active{
+    color:var(--brick);
+  }
+
+  .restock-add{
+    display:flex;
+    gap:6px;
+  }
+
+  .restock-add input[name=rqty]{
+    width:44px;
+    text-align:center;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:7px;
+    color:var(--ink);
+    font-family:ui-monospace,monospace;
+    font-size:13px;
+    padding:7px 2px;
+  }
+
+  .restock-add input[name=rsrc]{
+    flex:1;
+    min-width:0;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:7px;
+    color:var(--ink);
+    font-size:13px;
+    padding:7px 8px;
+  }
+
+  .restock-add input:focus{
+    outline:none;
+    border-color:var(--amber-dim);
+  }
+
+  .restock-add button{
+    background:transparent;
+    border:1px solid var(--line);
+    color:var(--teal);
+    border-radius:7px;
+    font-size:12px;
+    padding:0 12px;
+    cursor:pointer;
+  }
+
+  .restock-add button:active{
+    border-color:var(--teal);
+  }
+
+  /* ---------- Stats ---------- */
+
+  .stats-row{
+    display:flex;
+    justify-content:space-between;
+    gap:6px;
+    padding:8px 2px;
+    margin:6px 0 10px;
+    border-top:1px solid var(--line);
+    border-bottom:1px solid var(--line);
+  }
+
+  .stats-row .cell{
+    text-align:center;
+    flex:1;
+  }
+
+  .stats-row .cell span{
+    display:block;
+    font-size:10px;
+    color:var(--ink-muted);
+    margin-bottom:2px;
+  }
+
+  .stats-row .cell b{
+    font-family:ui-monospace,monospace;
+    font-size:15px;
+    font-weight:600;
+  }
+
+  .rest-ok{color:var(--ink);}
+  .rest-low{color:var(--amber);}
+  .rest-zero{color:var(--brick);}
+
+  /* ---------- Actions ---------- */
+
+  .action-row{
+    display:flex;
+    gap:8px;
+    align-items:center;
+  }
+
+  .qty-input{
+    width:48px;
+    text-align:center;
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    border-radius:7px;
+    color:var(--ink);
+    font-family:ui-monospace,monospace;
+    font-size:14px;
+    padding:8px 4px;
+  }
+
+  .qty-input:focus{
+    outline:none;
+    border-color:var(--amber-dim);
+  }
+
+  .btn-sell{
+    flex:1;
+    background:var(--amber);
+    color:#1A1400;
+    border:none;
+    border-radius:7px;
+    font-weight:600;
+    font-size:14px;
+    padding:9px 0;
+    cursor:pointer;
+  }
+
+  .btn-sell:active{
+    background:var(--amber-dim);
+    color:var(--ink);
+  }
+
+  .btn-sell:disabled{
+    background:var(--surface-2);
+    color:var(--ink-muted);
+  }
+
+  .btn-undo{
+    background:transparent;
+    border:1px solid var(--line);
+    color:var(--ink-muted);
+    border-radius:7px;
+    font-size:16px;
+    padding:8px 12px;
+    cursor:pointer;
+    line-height:1;
+  }
+
+  .btn-undo:active{
+    border-color:var(--brick-dim);
+    color:var(--brick);
+  }
+
+  .btn-undo:disabled{
+    opacity:.35;
+  }
+
+  /* ---------- Sidebar ---------- */
+
+  .sidebar-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.55);
+    z-index:150;
+    display:flex;
+  }
+
+  .sidebar-overlay[hidden]{
+    display:none;
+  }
+
+  .sidebar{
+    width:82%;
+    max-width:300px;
+    height:100%;
+    background:var(--surface);
+    border-right:1px solid var(--line);
+    display:flex;
+    flex-direction:column;
+    padding:16px 14px;
+    overflow-y:auto;
+  }
+
+  .sidebar-app-title{
+    font-size:17px;
+    font-weight:600;
+    margin-bottom:14px;
+  }
+
+  .sidebar-app-title-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:4px;
+  }
+
+  .sidebar-app-title-row .sidebar-app-title{
+    margin-bottom:0;
+  }
+
+  .sidebar-section-title{
+    font-size:11px;
+    color:var(--ink-muted);
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    margin:10px 0 8px;
+  }
+
+  .wagon-list{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+
+  .wagon-row{
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+
+  .wagon-btn{
+    flex:1;
+    text-align:left;
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    color:var(--ink);
+    border-radius:8px;
+    padding:10px 12px;
+    font-size:14px;
+    cursor:pointer;
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .wagon-btn.active{
+    border-color:var(--amber);
+    color:var(--amber);
+  }
+
+  .wagon-del{
+    background:transparent;
+    border:1px solid var(--line);
+    color:var(--ink-muted);
+    border-radius:7px;
+    padding:8px 9px;
+    font-size:13px;
+    cursor:pointer;
+  }
+
+  .wagon-del.confirm{
+    color:var(--brick);
+    border-color:var(--brick-dim);
+    font-size:11px;
+    padding:8px 7px;
+  }
+
+  .sidebar-add-wagon{
+    display:flex;
+    gap:6px;
+    margin-top:10px;
+  }
+
+  .sidebar-add-wagon input{
+    flex:1;
+    min-width:0;
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    border-radius:7px;
+    color:var(--ink);
+    font-size:14px;
+    padding:9px 10px;
+  }
+
+  .sidebar-add-wagon input:focus{
+    outline:none;
+    border-color:var(--amber-dim);
+  }
+
+  .sidebar-add-wagon button{
+    background:var(--amber);
+    color:#1A1400;
+    border:none;
+    border-radius:7px;
+    font-weight:600;
+    font-size:15px;
+    padding:0 14px;
+    cursor:pointer;
+  }
+
+  .sidebar-divider{
+    height:1px;
+    background:var(--line);
+    margin:16px 0;
+  }
+
+  .sidebar-nav-item{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    width:100%;
+    text-align:left;
+    background:transparent;
+    border:none;
+    color:var(--ink);
+    font-size:14px;
+    padding:11px 4px;
+    cursor:pointer;
+    border-radius:8px;
+  }
+
+  .sidebar-nav-item:hover{
+    background:var(--surface-2);
+  }
+
+  .sidebar-nav-item:active,
+  .sidebar-nav-item.active{
+    color:var(--amber);
+  }
+
+  /* ---------- Page views ---------- */
+
+  .page-view{
+    padding:4px 12px 0;
+  }
+
+  .page-title{
+    font-size:13px;
+    font-weight:600;
+    margin:12px 0 10px;
+    color:var(--ink-muted);
+    text-transform:uppercase;
+    letter-spacing:.03em;
+  }
+
+  .summary-grid{
+    display:flex;
+    gap:8px;
+    margin-bottom:14px;
+  }
+
+  .summary-cell{
+    flex:1;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:10px 6px;
+    text-align:center;
+  }
+
+  .summary-cell span{
+    display:block;
+    font-size:10px;
+    color:var(--ink-muted);
+    margin-bottom:3px;
+  }
+
+  .summary-cell b{
+    font-family:ui-monospace,monospace;
+    font-size:16px;
+  }
+
+  .summary-cell.cash b{color:var(--teal);}
+  .summary-cell.noncash b{color:var(--amber);}
+
+  .receipt-add-row{
+    display:flex;
+    gap:8px;
+    margin-bottom:14px;
+  }
+
+  .receipt-add-row select{
+    flex:1.2;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:7px;
+    color:var(--ink);
+    font-size:13px;
+    padding:9px 8px;
+  }
+
+  .receipt-add-row input{
+    flex:1;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:7px;
+    color:var(--ink);
+    font-family:ui-monospace,monospace;
+    font-size:14px;
+    padding:9px 10px;
+  }
+
+  .receipt-add-row input:focus,
+  .receipt-add-row select:focus{
+    outline:none;
+    border-color:var(--amber-dim);
+  }
+
+  .receipt-add-row button{
+    background:var(--amber);
+    color:#1A1400;
+    border:none;
+    border-radius:7px;
+    font-weight:600;
+    font-size:13px;
+    padding:0 14px;
+    cursor:pointer;
+  }
+
+  .receipt-entry{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:7px;
+    padding:9px 12px;
+    margin-bottom:6px;
+  }
+
+  .receipt-entry .re-left{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+    min-width:0;
+  }
+
+  .receipt-entry .re-wagon{
+    font-size:11px;
+    color:var(--amber);
+  }
+
+  .receipt-entry .re-amt{
+    font-family:ui-monospace,monospace;
+    font-size:14px;
+  }
+
+  .receipt-entry .re-time{
+    font-size:10px;
+    color:var(--ink-muted);
+  }
+
+  .receipt-entry button{
+    background:transparent;
+    border:none;
+    color:var(--ink-muted);
+    font-size:15px;
+    cursor:pointer;
+  }
+
+  .receipt-entry button:active{
+    color:var(--brick);
+  }
+
+  /* ---------- Tables ---------- */
+
+  table.ledger{
+    border-collapse:collapse;
+    width:100%;
+    font-size:12.5px;
+    white-space:nowrap;
+  }
+
+  table.ledger th,
+  table.ledger td{
+    padding:8px 10px;
+    border-bottom:1px solid var(--line);
+    text-align:right;
+  }
+
+  table.ledger th:first-child,
+  table.ledger td:first-child{
+    text-align:left;
+    position:sticky;
+    left:0;
+    background:var(--surface);
+    max-width:120px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  table.ledger thead th{
+    font-weight:600;
+    color:var(--ink-muted);
+    font-size:10.5px;
+    text-transform:uppercase;
+    letter-spacing:.03em;
+    border-bottom:1px solid var(--line);
+    background:var(--surface);
+    position:sticky;
+    top:0;
+  }
+
+  table.ledger tbody tr:active{
+    background:var(--surface-2);
+  }
+
+  table.ledger td.mono,
+  table.ledger th.mono{
+    font-family:ui-monospace,monospace;
+  }
+
+  table.ledger td.rest-zero{color:var(--brick);}
+  table.ledger td.rest-low{color:var(--amber);}
+
+  table.ledger tfoot td{
+    font-weight:600;
+    border-top:1px solid var(--line);
+    border-bottom:none;
+    color:var(--ink);
+    background:var(--surface-2);
+  }
+
+  .table-wrap{
+    margin:4px 12px 0;
+    overflow-x:auto;
+    border:1px solid var(--line);
+    border-radius:10px;
+    background:var(--surface);
+  }
+
+  .table-action-btn{
+    background:transparent;
+    border:1px solid var(--line);
+    color:var(--ink-muted);
+    border-radius:6px;
+    padding:4px 7px;
+    cursor:pointer;
+    font-size:13px;
+  }
+
+  .table-action-btn:hover{
+    color:var(--brick);
+    border-color:var(--brick-dim);
+  }
+
+  .table-action-confirm{
+    color:var(--brick);
+    border-color:var(--brick-dim);
+    font-size:11px;
+  }
+
+  /* ---------- Catalog ---------- */
+
+  .catalog-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:9px;
+    padding:10px 12px;
+    margin-bottom:8px;
+  }
+
+  .catalog-row .cat-name{
+    flex:1;
+    min-width:0;
+    font-size:14px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .catalog-row input[name=catprice]{
+    width:80px;
+    text-align:right;
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    border-radius:7px;
+    color:var(--ink);
+    font-family:ui-monospace,monospace;
+    font-size:13px;
+    padding:7px 8px;
+  }
+
+  .catalog-row input:focus{
+    outline:none;
+    border-color:var(--amber-dim);
+  }
+
+  /* ---------- Modals ---------- */
+
+  .modal-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.55);
+    z-index:120;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+  }
+
+  .modal-overlay[hidden]{
+    display:none;
+  }
+
+  .modal-card{
+    width:100%;
+    max-width:360px;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:18px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+
+  .modal-title{
+    font-size:16px;
+    font-weight:600;
+  }
+
+  .modal-card input,
+  .modal-card select{
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    border-radius:7px;
+    color:var(--ink);
+    font-family:-apple-system,sans-serif;
+    font-size:14px;
+    padding:11px 12px;
+  }
+
+  .modal-card input:focus,
+  .modal-card select:focus{
+    outline:none;
+    border-color:var(--amber-dim);
+  }
+
+  .modal-grid{
+    display:flex;
+    gap:8px;
+  }
+
+  .modal-grid input{
+    width:0;
+    flex:1;
+  }
+
+  .modal-hint{
+    font-size:11px;
+    color:var(--ink-muted);
+    margin-top:-4px;
+  }
+
+  .modal-actions{
+    display:flex;
+    gap:8px;
+    margin-top:4px;
+  }
+
+  .modal-actions button{
+    flex:1;
+    border:none;
+    border-radius:7px;
+    font-weight:600;
+    font-size:14px;
+    padding:11px 0;
+    cursor:pointer;
+  }
+
+  .modal-cancel{
+    background:var(--surface-2);
+    color:var(--ink-muted);
+  }
+
+  .modal-submit{
+    background:var(--amber);
+    color:#1A1400;
+  }
+
+  /* ---------- Keyboard help ---------- */
+
+  .help-modal-card{
+    width:100%;
+    max-width:560px;
+    max-height:85vh;
+    overflow-y:auto;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:18px;
+  }
+
+  .help-title{
+    font-size:18px;
+    font-weight:600;
+    margin-bottom:14px;
+  }
+
+  .help-list{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+
+  .help-section{
+    font-size:11px;
+    color:var(--ink-muted);
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    margin:14px 0 6px;
+  }
+
+  .help-row{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:8px 0;
+    border-bottom:1px solid var(--line);
+  }
+
+  .help-row:last-child{
+    border-bottom:none;
+  }
+
+  .help-key{
+    min-width:115px;
+    text-align:center;
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:5px 8px;
+    font-family:ui-monospace,monospace;
+    font-size:12px;
+    font-weight:600;
+    color:var(--amber);
+  }
+
+  .help-desc{
+    flex:1;
+    font-size:13px;
+    line-height:1.4;
+  }
+
+  /* ---------- Toast ---------- */
+
+  .toast{
+    position:fixed;
+    left:50%;
+    bottom:24px;
+    transform:translateX(-50%) translateY(20px);
+    background:var(--surface);
+    border:1px solid var(--amber-dim);
+    color:var(--ink);
+    padding:11px 18px;
+    border-radius:999px;
+    font-size:13px;
+    z-index:200;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .25s ease,transform .25s ease;
+    box-shadow:0 6px 18px rgba(0,0,0,.35);
+    max-width:88%;
+    text-align:center;
+  }
+
+  .toast.show{
+    opacity:1;
+    transform:translateX(-50%) translateY(0);
+  }
+
+  .toast b{
+    color:var(--amber);
+  }
+
+  .status-line{
+    text-align:center;
+    font-size:11px;
+    color:var(--ink-muted);
+    padding:14px 0 0;
+  }
+
+  /* ---------- PC keyboard focus ---------- */
+
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible{
+    outline:2px solid var(--amber);
+    outline-offset:1px;
+  }
+
+  @media (max-width:600px){
+    .help-row{
+      align-items:flex-start;
+    }
+
+    .help-key{
+      min-width:100px;
+    }
+  }
+</style>
+</head>
+
+<body>
+
+<!-- ================= TOPBAR ================= -->
+
+<div class="topbar">
+  <button id="menuBtn" class="icon-plain" title="Меню">☰</button>
+
+  <div class="topbar-title-wrap">
+    <input
+      id="titleInput"
+      class="topbar-title-input"
+      value="Вагон"
+      maxlength="60"
+      hidden
+    >
+
+    <div id="staticTitle" class="topbar-title-static" hidden></div>
+
+    <small id="dateLine"></small>
+  </div>
+
+  <div class="topbar-right" id="topbarRight"></div>
+</div>
+
+<!-- ================= SEARCH ================= -->
+
+<div class="search-bar" id="searchBar" hidden>
+  <input
+    id="searchInput"
+    type="text"
+    placeholder="Поиск по названию…"
+    autocomplete="off"
+  >
+</div>
+
+<!-- ================= MAIN ================= -->
+
+<main id="list"></main>
+
+<div id="tableWrap" class="table-wrap" hidden></div>
+
+<!-- ================= RECEIPTS ================= -->
+
+<div id="receiptsView" class="page-view" hidden>
+
+  <div class="page-title">Все чеки</div>
+
+  <div class="receipt-add-row" style="margin-bottom:10px;">
+    <select id="receiptsFilterWagon" style="flex:1;"></select>
+  </div>
+
+  <div class="summary-grid">
+    <div class="summary-cell noncash" style="flex:1">
+      <span id="allReceiptsSumLabel">всего безнал</span>
+      <b class="mono" id="allReceiptsSum">р.0</b>
+    </div>
+  </div>
+
+  <div
+    class="table-wrap"
+    style="margin:0 0 14px;"
+    id="receiptsByWagonWrap"
+  >
+    <div id="receiptsByWagonTable"></div>
+  </div>
+
+  <div class="receipt-add-row">
+    <select id="receiptWagonSelect"></select>
+
+    <input
+      id="receiptAmount"
+      type="number"
+      inputmode="decimal"
+      step="0.01"
+      min="0"
+      placeholder="Сумма, р."
+    >
+
+    <button id="receiptAddBtn">+</button>
+  </div>
+
+  <div id="receiptsList"></div>
+</div>
+
+<!-- ================= SUMMARY ================= -->
+
+<div id="summaryView" class="page-view" hidden>
+
+  <div class="page-title">Итоги по всем вагонам</div>
+
+  <div class="summary-grid">
+
+    <div class="summary-cell">
+      <span>выручка</span>
+      <b class="mono" id="sumRevenue">р.0</b>
+    </div>
+
+    <div class="summary-cell">
+      <span>остатки</span>
+      <b class="mono" id="sumRemainingValue">р.0</b>
+    </div>
+
+    <div class="summary-cell noncash">
+      <span>безнал</span>
+      <b class="mono" id="sumNoncash">р.0</b>
+    </div>
+
+    <div class="summary-cell cash">
+      <span>наличные</span>
+      <b class="mono" id="sumCash">р.0</b>
+    </div>
+
+  </div>
+
+  <div class="table-wrap" style="margin:0;">
+    <div id="summaryTable"></div>
+  </div>
+
+</div>
+
+<!-- ================= CATALOG ================= -->
+
+<div id="catalogView" class="page-view" hidden>
+
+  <div class="page-title">Список товаров (каталог)</div>
+
+  <div id="catalogList"></div>
+
+</div>
+
+<!-- ================= TRANSFERS ================= -->
+
+<div id="transfersView" class="page-view" hidden>
+
+  <div class="page-title">Перемещения между вагонов</div>
+
+  <div class="table-wrap" style="margin:0;">
+    <div id="transfersTable"></div>
+  </div>
+
+</div>
+
+<!-- ================= SIDEBAR ================= -->
+
+<div id="sidebarOverlay" class="sidebar-overlay" hidden>
+
+  <nav class="sidebar">
+
+    <div class="sidebar-app-title-row">
+
+      <div class="sidebar-app-title">
+        Вагоны
+      </div>
+
+      <button
+        id="themeToggleBtn"
+        class="icon-plain"
+        title="Сменить тему"
+      >
+        🌙
+      </button>
+
+    </div>
+
+    <div class="sidebar-section-title">
+      Все вагоны
+    </div>
+
+    <div class="wagon-list" id="wagonList"></div>
+
+    <div class="sidebar-add-wagon">
+
+      <input
+        id="newWagonName"
+        placeholder="Название/номер вагона"
+        autocomplete="off"
+      >
+
+      <button id="addWagonBtn">+</button>
+
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <button class="sidebar-nav-item" id="navReceipts">
+      🧾 Все чеки
+    </button>
+
+    <button class="sidebar-nav-item" id="navSummary">
+      Σ Итоги по всем вагонам
+    </button>
+
+    <button class="sidebar-nav-item" id="navCatalog">
+      📦 Список товаров
+    </button>
+
+    <button class="sidebar-nav-item" id="navTransfer">
+      🔁 Перемещения между вагонов
+    </button>
+
+    <button class="sidebar-nav-item" id="navHelp">
+      ⌨️ Справка по клавиатуре
+    </button>
+
+    <div class="sidebar-divider"></div>
+
+    <div class="sidebar-section-title">
+      Резервная копия
+    </div>
+
+    <div
+      class="modal-hint"
+      style="margin-bottom:8px;"
+    >
+      Данные хранятся в этом браузере.
+      Сохраняйте копию файлом на случай очистки
+      браузера или смены телефона.
+    </div>
+
+    <div class="sidebar-add-wagon">
+
+      <button
+        id="exportBtn"
+        style="
+          flex:1;
+          background:var(--surface-2);
+          border:1px solid var(--line);
+          color:var(--ink);
+          border-radius:7px;
+          padding:10px 0;
+          font-size:13px;
+          cursor:pointer;
+        "
+      >
+        Экспорт
+      </button>
+
+      <label
+        for="importFile"
+        style="
+          flex:1;
+          text-align:center;
+          background:var(--surface-2);
+          border:1px solid var(--line);
+          color:var(--ink);
+          border-radius:7px;
+          padding:10px 0;
+          font-size:13px;
+          cursor:pointer;
+        "
+      >
+        Импорт
+      </label>
+
+      <input
+        id="importFile"
+        type="file"
+        accept="application/json"
+        style="display:none;"
+      >
+
+    </div>
+
+  </nav>
+
+</div>
+
+<!-- ================= ISSUE MODAL ================= -->
+
+<div id="addOverlay" class="modal-overlay" hidden>
+
+  <div class="modal-card">
+
+    <div class="modal-title">
+      Выдать товар в вагон
+    </div>
+
+    <form id="addForm">
+
+      <select
+        name="catalogId"
+        id="issueCatalogSelect"
+        required
+      ></select>
+
+      <input
+        name="issued"
+        type="number"
+        inputmode="numeric"
+        placeholder="Выдано, шт"
+        min="0"
+        value="0"
+      >
+
+      <div
+        class="modal-hint"
+        id="issueEmptyHint"
+        hidden
+      >
+        Каталог пуст.
+        <span
+          id="goToCatalogBtn"
+          style="
+            color:var(--amber);
+            text-decoration:underline;
+            cursor:pointer;
+          "
+        >
+          Добавить товар в каталог
+        </span>
+      </div>
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          id="cancelAddBtn"
+          class="modal-cancel"
+        >
+          Отмена
+        </button>
+
+        <button
+          type="submit"
+          class="modal-submit"
+          id="issueSubmitBtn"
+        >
+          Выдать
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+
+<!-- ================= TRANSFER MODAL ================= -->
+
+<div id="transferOverlay" class="modal-overlay" hidden>
+
+  <div class="modal-card">
+
+    <div class="modal-title">
+      Переместить товар между вагонами
+    </div>
+
+    <form id="transferForm">
+
+      <select
+        name="fromWagon"
+        id="transferFromWagon"
+        required
+      ></select>
+
+      <select
+        name="itemId"
+        id="transferItem"
+        required
+      ></select>
+
+      <select
+        name="toWagon"
+        id="transferToWagon"
+        required
+      ></select>
+
+      <input
+        name="qty"
+        type="number"
+        inputmode="numeric"
+        placeholder="Количество"
+        min="1"
+        value="1"
+        required
+      >
+
+      <div
+        class="modal-hint"
+        id="transferHint"
+      ></div>
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          id="cancelTransferBtn"
+          class="modal-cancel"
+        >
+          Отмена
+        </button>
+
+        <button
+          type="submit"
+          class="modal-submit"
+        >
+          Переместить
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+
+<!-- ================= ADD CATALOG MODAL ================= -->
+
+<div id="addCatalogOverlay" class="modal-overlay" hidden>
+
+  <div class="modal-card">
+
+    <div class="modal-title">
+      Новый товар в каталог
+    </div>
+
+    <form id="addCatalogForm">
+
+      <input
+        name="name"
+        placeholder="Название товара"
+        autocomplete="off"
+        required
+      >
+
+      <input
+        name="price"
+        type="number"
+        inputmode="decimal"
+        placeholder="Цена, р."
+        step="0.01"
+        min="0"
+        required
+      >
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          id="cancelCatalogBtn"
+          class="modal-cancel"
+        >
+          Отмена
+        </button>
+
+        <button
+          type="submit"
+          class="modal-submit"
+        >
+          Добавить
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+
+<!-- ================= KEYBOARD HELP ================= -->
+
+<div id="helpOverlay" class="modal-overlay" hidden>
+
+  <div class="help-modal-card">
+
+    <div class="help-title">
+      ⌨️ Управление с клавиатуры
+    </div>
+
+    <div class="help-section">
+      Основные действия
+    </div>
+
+    <div class="help-list">
+
+      <div class="help-row">
+        <div class="help-key">Ctrl + Enter</div>
+        <div class="help-desc">
+          Основное действие текущего экрана.
+        </div>
+      </div>
+
+      <div class="help-row">
+        <div class="help-key">Esc</div>
+        <div class="help-desc">
+          Закрыть модальное окно или меню.
+        </div>
+      </div>
+
+      <div class="help-row">
+        <div class="help-key">/</div>
+        <div class="help-desc">
+          Быстро перейти к поиску товара.
+        </div>
+      </div>
+
+      <div class="help-row">
+        <div class="help-key">Ctrl + K</div>
+        <div class="help-desc">
+          Открыть поиск товара.
+        </div>
+      </div>
+
+      <div class="help-row">
+        <div class="help-key">?</div>
+        <div class="help-desc">
+          Открыть эту справку.
+        </div>
+      </div>
+
+    </div>
+
+    <div class="help-section">
+      Навигация
+    </div>
+
+    <div class="help-list">
+
+      <div class="help-row">
+        <div class="help-key">Alt + 1</div>
+        <div class="help-desc">
+          Вагоны.
+        </div>
+      </div>
+
+      <div class="help-row">
+        <div class="help-key">Alt + 2</div>
+        <div class="help-desc">
+          Все чеки.
+        </div>
+      </div>
+
+      <div class="help-row">
+        <div class="help-key">Alt + 3</div>
+        <div class="help-desc">
+          Итоги.
+        </div>
+      </div>
+
+      <div class="help-row">
+        <div class="help-key">Alt + 4</div>
+        <div class="help-desc">
+          Каталог товаров.
+        </div>
+      </div>
+
+      <div class="help-row">
+        <div class="help-key">Alt + 5</div>
+        <div class="help-desc">
+          Перемещения.
+        </div>
+      </div>
+
+      <div class="help-row">
+        <div class="help-key">M</div>
+        <div class="help-desc">
+          Открыть / закрыть меню.
+        </div>
+      </div>
+
+      <div class="help-row">
+        <div class="help-key">N</div>
+        <div class="help-desc">
+          Открыть меню и перейти в поле добавления вагона.
+        </div>
+      </div>
+
+    </div>
+
+    <div class="help-section">
+      Ctrl + Enter на разных экранах
+    </div>
+
+    <div class="help-list">
+
+      <div class="help-row">
+        <div class="help-key">Вагоны</div>
+        <div class="help-desc">
+          Открыть выдачу товара.
+        </div>
+      </div>
+
+      <div class="help-row">
+        <div class="help-key">Чеки</div>
+        <div class="help-desc">
+          Перейти к вводу суммы.
+        </div>
+      </div>
+
+      <div class="help-row">
+        <div class="help-key">Итоги</div>
+        <div class="help-desc">
+          Отдельного действия нет.
+        </div>
+      </div>
+
+      <div class="help-row">
+        <div class="help-key">Каталог</div>
+        <div class="help-desc">
+          Добавить товар.
+        </div>
+      </div>
+
+      <div class="help-row">
+        <div class="help-key">Перемещения</div>
+        <div class="help-desc">
+          Открыть перемещение.
+        </div>
+      </div>
+
+      <div class="help-row">
+        <div class="help-key">Модалка</div>
+        <div class="help-desc">
+          Подтвердить действие.
+        </div>
+      </div>
+
+    </div>
+
+    <div class="help-section">
+      Работа с кнопкой 📦
+    </div>
+
+    <div class="help-list">
+
+      <div class="help-row">
+        <div class="help-key">📦 1 раз</div>
+        <div class="help-desc">
+          Увеличить выданное количество каждого товара на 1.
+        </div>
+      </div>
+
+      <div class="help-row">
+        <div class="help-key">📦 2 раза</div>
+        <div class="help-desc">
+          Количество станет 2.
+        </div>
+      </div>
+
+      <div class="help-row">
+        <div class="help-key">📦 3 раза</div>
+        <div class="help-desc">
+          Количество станет 3 и т.д.
+        </div>
+      </div>
+
+    </div>
+
+    <div class="help-section">
+      Перемещения
+    </div>
+
+    <div class="help-list">
+
+      <div class="help-row">
+        <div class="help-key">✕</div>
+        <div class="help-desc">
+          Удалить запись из истории перемещений. Требуется подтверждение.
+        </div>
+      </div>
+
+    </div>
+
+    <div class="modal-actions" style="margin-top:14px;">
+
+      <button
+        type="button"
+        id="closeHelpBtn"
+        class="modal-cancel"
+      >
+        Закрыть
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+<!-- ================= TOAST ================= -->
+
+<div id="toast" class="toast"></div>
+
+<div
+  class="status-line"
+  id="statusLine"
+></div>
+
+<script>
+const LS_KEY = 'vagony_v1';
+
+/* =========================================================
+   STATE
+========================================================= */
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+
+    if(raw){
+      const parsed = JSON.parse(raw);
+
+      if(!Array.isArray(parsed.wagons)) parsed.wagons = [];
+      if(!Array.isArray(parsed.catalog)) parsed.catalog = [];
+      if(!Array.isArray(parsed.items)) parsed.items = [];
+      if(!Array.isArray(parsed.receipts)) parsed.receipts = [];
+      if(!Array.isArray(parsed.transfers)) parsed.transfers = [];
+
+      return parsed;
+    }
+
+  }catch(e){}
+
+  return {
+    wagons:[],
+    catalog:[],
+    items:[],
+    receipts:[],
+    transfers:[],
+    currentWagonId:null
+  };
+}
+
+function saveState(){
+  try{
+    localStorage.setItem(
+      LS_KEY,
+      JSON.stringify(state)
+    );
+  }catch(e){
+    setStatus('Не удалось сохранить в память браузера.');
+  }
+}
+
+let state = loadState();
+
+let wagons = state.wagons;
+let catalog = state.catalog;
+let allItems = state.items;
+let allReceipts = state.receipts;
+let allTransfers = state.transfers;
+
+let currentWagonId = state.currentWagonId;
+
+let mainView = 'wagon';
+let viewMode = 'list';
+let searchQuery = '';
+
+let pendingDelete = new Set();
+
+/* =========================================================
+   ELEMENTS
+========================================================= */
+
+const listEl = document.getElementById('list');
+const tableWrap = document.getElementById('tableWrap');
+
+const searchBar = document.getElementById('searchBar');
+const searchInput = document.getElementById('searchInput');
+
+const titleInput = document.getElementById('titleInput');
+const staticTitle = document.getElementById('staticTitle');
+const dateLine = document.getElementById('dateLine');
+const topbarRight = document.getElementById('topbarRight');
+const statusLine = document.getElementById('statusLine');
+const toastEl = document.getElementById('toast');
+
+const sidebarOverlay = document.getElementById('sidebarOverlay');
+const wagonListEl = document.getElementById('wagonList');
+
+const menuBtn = document.getElementById('menuBtn');
+const newWagonName = document.getElementById('newWagonName');
+const addWagonBtn = document.getElementById('addWagonBtn');
+
+const receiptsView = document.getElementById('receiptsView');
+const summaryView = document.getElementById('summaryView');
+const catalogView = document.getElementById('catalogView');
+const transfersView = document.getElementById('transfersView');
+
+const addOverlay = document.getElementById('addOverlay');
+const addForm = document.getElementById('addForm');
+
+const transferOverlay = document.getElementById('transferOverlay');
+const transferForm = document.getElementById('transferForm');
+
+const addCatalogOverlay = document.getElementById('addCatalogOverlay');
+const addCatalogForm = document.getElementById('addCatalogForm');
+
+const helpOverlay = document.getElementById('helpOverlay');
+const closeHelpBtn = document.getElementById('closeHelpBtn');
+
+/* =========================================================
+   THEME
+========================================================= */
+
+const THEME_KEY = 'vagony_theme';
+const themeToggleBtn = document.getElementById('themeToggleBtn');
+
+function applyTheme(theme){
+
+  if(theme === 'light'){
+    document.documentElement.setAttribute(
+      'data-theme',
+      'light'
+    );
+
+    themeToggleBtn.textContent = '☀️';
+
+  }else{
+
+    document.documentElement.removeAttribute(
+      'data-theme'
+    );
+
+    themeToggleBtn.textContent = '🌙';
+  }
+}
+
+(function initTheme(){
+
+  let saved = null;
+
+  try{
+    saved = localStorage.getItem(THEME_KEY);
+  }catch(e){}
+
+  applyTheme(
+    saved === 'light'
+      ? 'light'
+      : 'dark'
+  );
+
+})();
+
+themeToggleBtn.addEventListener(
+  'click',
+  () => {
+
+    const isLight =
+      document.documentElement.getAttribute(
+        'data-theme'
+      ) === 'light';
+
+    const next =
+      isLight
+        ? 'dark'
+        : 'light';
+
+    applyTheme(next);
+
+    try{
+      localStorage.setItem(
+        THEME_KEY,
+        next
+      );
+    }catch(e){}
+
+  }
+);
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+dateLine.textContent =
+  new Date().toLocaleDateString(
+    'ru-RU',
+    {
+      day:'2-digit',
+      month:'long'
+    }
+  );
+
+function money(n){
+
+  n = Number(n) || 0;
+
+  return 'р.' +
+    (
+      Math.round(n * 100) / 100
+    ).toLocaleString(
+      'ru-RU',
+      {
+        minimumFractionDigits:
+          n % 1 !== 0 ? 2 : 0
+      }
+    );
+}
+
+function uid(){
+  return 'id' +
+    Date.now().toString(36) +
+    Math.random().toString(36).slice(2,7);
+}
+
+function escapeAttr(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;')
+    .replace(/"/g,'&quot;')
+    .replace(/</g,'&lt;');
+}
+
+function escapeHtml(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;');
+}
+
+function restockTotal(it){
+  return (it.restocks || [])
+    .reduce(
+      (s,r) => s + (Number(r.qty) || 0),
+      0
+    );
+}
+
+function wagonName(id){
+  const w = wagons.find(
+    w => w.id === id
+  );
+
+  return w
+    ? w.name
+    : '—';
+}
+
+function itemRemaining(it){
+  return (
+    (it.issued || 0) +
+    restockTotal(it) -
+    (it.sold || 0)
+  );
+}
+
+function showToast(msg){
+
+  toastEl.innerHTML = msg;
+
+  toastEl.classList.add('show');
+
+  clearTimeout(showToast._t);
+
+  showToast._t = setTimeout(
+    () => toastEl.classList.remove('show'),
+    2500
+  );
+}
+
+function setStatus(msg){
+
+  statusLine.textContent = msg;
+
+  if(msg){
+
+    setTimeout(
+      () => {
+
+        if(
+          statusLine.textContent === msg
+        ){
+          statusLine.textContent = '';
+        }
+
+      },
+      3500
+    );
+
+  }
+}
+
+/* =========================================================
+   SIDEBAR
+========================================================= */
+
+function openSidebar(){
+
+  sidebarOverlay.hidden = false;
+
+  renderSidebar();
+
+}
+
+function closeSidebar(){
+
+  sidebarOverlay.hidden = true;
+
+}
+
+menuBtn.addEventListener(
+  'click',
+  openSidebar
+);
+
+sidebarOverlay.addEventListener(
+  'click',
+  e => {
+
+    if(e.target === sidebarOverlay){
+      closeSidebar();
+    }
+
+  }
+);
+
+function renderSidebar(){
+
+  if(!wagons.length){
+
+    wagonListEl.innerHTML =
+      '<div style="font-size:12px;color:var(--ink-muted);padding:6px 2px;">Пока нет вагонов</div>';
+
+  }else{
+
+    wagonListEl.innerHTML =
+      wagons.map(
+        w => `
+          <div
+            class="wagon-row"
+            data-wid="${w.id}"
+          >
+
+            <button
+              class="wagon-btn ${
+                w.id === currentWagonId &&
+                mainView === 'wagon'
+                  ? 'active'
+                  : ''
+              }"
+            >
+              ${escapeHtml(w.name)}
+            </button>
+
+            <button
+              class="wagon-del"
+              data-wid="${w.id}"
+            >
+              ${
+                pendingDelete.has('w_' + w.id)
+                  ? 'Точно?'
+                  : '✕'
+              }
+            </button>
+
+          </div>
+        `
+      ).join('');
+  }
+
+  wagonListEl
+    .querySelectorAll('.wagon-row')
+    .forEach(row => {
+
+      const wid = row.dataset.wid;
+
+      row
+        .querySelector('.wagon-btn')
+        .addEventListener(
+          'click',
+          () => {
+
+            currentWagonId = wid;
+
+            state.currentWagonId =
+              wid;
+
+            mainView = 'wagon';
+
+            closeSidebar();
+
+            saveState();
+
+            renderMain();
+
+          }
+        );
+
+      const delBtn =
+        row.querySelector('.wagon-del');
+
+      delBtn.addEventListener(
+        'click',
+        () => {
+
+          if(
+            pendingDelete.has(
+              'w_' + wid
+            )
+          ){
+
+            pendingDelete.delete(
+              'w_' + wid
+            );
+
+            wagons =
+              wagons.filter(
+                w => w.id !== wid
+              );
+
+            state.wagons = wagons;
+
+            allItems =
+              allItems.filter(
+                it => it.wagonId !== wid
+              );
+
+            state.items = allItems;
+
+            allReceipts =
+              allReceipts.filter(
+                r => r.wagonId !== wid
+              );
+
+            state.receipts =
+              allReceipts;
+
+            if(currentWagonId === wid){
+
+              currentWagonId =
+                wagons.length
+                  ? wagons[0].id
+                  : null;
+
+              state.currentWagonId =
+                currentWagonId;
+
+            }
+
+            saveState();
+
+            renderMain();
+
+          }else{
+
+            pendingDelete.add(
+              'w_' + wid
+            );
+
+            renderSidebar();
+
+            setTimeout(
+              () => {
+
+                if(
+                  pendingDelete.has(
+                    'w_' + wid
+                  )
+                ){
+
+                  pendingDelete.delete(
+                    'w_' + wid
+                  );
+
+                  renderSidebar();
+
+                }
+
+              },
+              3000
+            );
+
+          }
+
+        }
+      );
+
+    });
+}
+
+/* =========================================================
+   ADD WAGON
+========================================================= */
+
+function addNewWagon(){
+
+  const name =
+    newWagonName.value.trim();
+
+  if(!name){
+    newWagonName.focus();
+    return;
+  }
+
+  const w = {
+    id:uid(),
+    name,
+    createdAt:Date.now()
+  };
+
+  wagons.push(w);
+
+  state.wagons = wagons;
+
+  newWagonName.value = '';
+
+  currentWagonId = w.id;
+
+  state.currentWagonId =
+    w.id;
+
+  mainView = 'wagon';
+
+  closeSidebar();
+
+  saveState();
+
+  showToast(
+    `Вагон «<b>${escapeHtml(name)}</b>» добавлен`
+  );
+
+  renderMain();
+
+}
+
+addWagonBtn.addEventListener(
+  'click',
+  addNewWagon
+);
+
+newWagonName.addEventListener(
+  'keydown',
+  e => {
+
+    if(e.key === 'Enter'){
+
+      e.preventDefault();
+
+      addNewWagon();
+
+    }
+
+  }
+);
+
+/* =========================================================
+   NAVIGATION
+========================================================= */
+
+document
+  .getElementById('navReceipts')
+  .addEventListener(
+    'click',
+    () => {
+
+      mainView = 'receipts';
+
+      closeSidebar();
+
+      renderMain();
+
+    }
+  );
+
+document
+  .getElementById('navSummary')
+  .addEventListener(
+    'click',
+    () => {
+
+      mainView = 'summary';
+
+      closeSidebar();
+
+      renderMain();
+
+    }
+  );
+
+document
+  .getElementById('navCatalog')
+  .addEventListener(
+    'click',
+    () => {
+
+      mainView = 'catalog';
+
+      closeSidebar();
+
+      renderMain();
+
+    }
+  );
+
+document
+  .getElementById('navTransfer')
+  .addEventListener(
+    'click',
+    () => {
+
+      mainView = 'transfers';
+
+      closeSidebar();
+
+      renderMain();
+
+    }
+  );
+
+/* =========================================================
+   MAIN ROUTER
+========================================================= */
+
+function renderMain(){
+
+  listEl.hidden = true;
+  tableWrap.hidden = true;
+  searchBar.hidden = true;
+
+  receiptsView.hidden = true;
+  summaryView.hidden = true;
+  catalogView.hidden = true;
+  transfersView.hidden = true;
+
+  titleInput.hidden = true;
+  staticTitle.hidden = true;
+
+  topbarRight.innerHTML = '';
+
+  if(mainView === 'wagon'){
+
+    if(!wagons.length){
+
+      listEl.hidden = false;
+
+      listEl.innerHTML =
+        '<div class="empty">Нет ни одного вагона.<br>Откройте меню ☰ и добавьте вагон.</div>';
+
+      staticTitle.hidden = false;
+
+      staticTitle.textContent =
+        'Вагоны';
+
+      renderSidebar();
+
+      return;
+    }
+
+    if(
+      !currentWagonId ||
+      !wagons.find(
+        w => w.id === currentWagonId
+      )
+    ){
+
+      currentWagonId =
+        wagons[0].id;
+
+      state.currentWagonId =
+        currentWagonId;
+
+      saveState();
+
+    }
+
+    const w =
+      wagons.find(
+        w => w.id === currentWagonId
+      );
+
+    titleInput.hidden = false;
+
+    if(
+      document.activeElement !==
+      titleInput
+    ){
+
+      titleInput.value =
+        w ? w.name : '';
+
+    }
+
+    searchBar.hidden = false;
+
+    topbarRight.innerHTML = `
+
+      <button
+        id="viewToggleBtn"
+        class="icon-plain"
+        title="Переключить вид"
+      >
+        ▤
+      </button>
+
+      <button
+        id="issueAllBtn"
+        class="icon-plain"
+        title="Добавить по одной единице каждого товара"
+      >
+        📦
+      </button>
+
+      <button
+        id="openAddBtn"
+        class="icon-plain"
+        title="Выдать товар"
+      >
+        +
+      </button>
+
+    `;
+
+    document
+      .getElementById('viewToggleBtn')
+      .addEventListener(
+        'click',
+        () => {
+
+          viewMode =
+            viewMode === 'list'
+              ? 'table'
+              : 'list';
+
+          renderWagonView();
+
+        }
+      );
+
+    document
+      .getElementById('issueAllBtn')
+      .addEventListener(
+        'click',
+        () => {
+
+          issueWholeCatalog(
+            currentWagonId
+          );
+
+        }
+      );
+
+    document
+      .getElementById('openAddBtn')
+      .addEventListener(
+        'click',
+        () => {
+          openAddModal();
+        }
+      );
+
+    renderWagonView();
+
+  }else if(mainView === 'receipts'){
+
+    staticTitle.hidden = false;
+
+    staticTitle.textContent =
+      'Все чеки';
+
+    receiptsView.hidden = false;
+
+    renderReceiptsView();
+
+  }else if(mainView === 'summary'){
+
+    staticTitle.hidden = false;
+
+    staticTitle.textContent =
+      'Итоги';
+
+    summaryView.hidden = false;
+
+    renderSummaryView();
+
+  }else if(mainView === 'catalog'){
+
+    staticTitle.hidden = false;
+
+    staticTitle.textContent =
+      'Каталог товаров';
+
+    catalogView.hidden = false;
+
+    topbarRight.innerHTML = `
+      <button
+        id="openCatalogAddBtn"
+        class="icon-plain"
+        title="Добавить товар"
+      >
+        +
+      </button>
+    `;
+
+    document
+      .getElementById('openCatalogAddBtn')
+      .addEventListener(
+        'click',
+        openCatalogModal
+      );
+
+    renderCatalogView();
+
+  }else if(mainView === 'transfers'){
+
+    staticTitle.hidden = false;
+
+    staticTitle.textContent =
+      'Перемещения';
+
+    transfersView.hidden = false;
+
+    topbarRight.innerHTML = `
+      <button
+        id="openTransferBtn"
+        class="icon-plain"
+        title="Переместить товар"
+      >
+        +
+      </button>
+    `;
+
+    document
+      .getElementById('openTransferBtn')
+      .addEventListener(
+        'click',
+        () => openTransferModal()
+      );
+
+    renderTransfersView();
+
+  }
+
+  renderSidebar();
+
+}
+
+/* =========================================================
+   TITLE
+========================================================= */
+
+titleInput.addEventListener(
+  'change',
+  () => {
+
+    if(
+      mainView !== 'wagon' ||
+      !currentWagonId
+    ){
+      return;
+    }
+
+    const val =
+      titleInput.value.trim() ||
+      'Вагон';
+
+    titleInput.value = val;
+
+    const w =
+      wagons.find(
+        w => w.id === currentWagonId
+      );
+
+    if(w){
+
+      w.name = val;
+
+      saveState();
+
+      renderSidebar();
+
+    }
+
+  }
+);
+
+/* =========================================================
+   SEARCH
+========================================================= */
+
+searchInput.addEventListener(
+  'input',
+  () => {
+
+    searchQuery =
+      searchInput.value;
+
+    renderWagonView();
+
+  }
+);
+
+function focusSearch(){
+
+  if(mainView !== 'wagon'){
+    return;
+  }
+
+  searchBar.hidden = false;
+
+  searchInput.focus();
+
+  searchInput.select();
+
+}
+
+function closeSearch(){
+
+  searchQuery = '';
+
+  searchInput.value = '';
+
+  if(mainView === 'wagon'){
+    renderWagonView();
+  }
+
+}
+
+/* =========================================================
+   WAGON VIEW
+========================================================= */
+
+function currentWagonItems(){
+
+  return allItems.filter(
+    it => it.wagonId === currentWagonId
+  );
+
+}
+
+function visibleWagonItems(){
+
+  const items =
+    currentWagonItems();
+
+  const q =
+    searchQuery
+      .trim()
+      .toLowerCase();
+
+  return q
+    ? items.filter(
+        it =>
+          (it.name || '')
+            .toLowerCase()
+            .includes(q)
+      )
+    : items;
+
+}
+
+function renderWagonView(){
+
+  if(mainView !== 'wagon'){
+    return;
+  }
+
+  if(viewMode === 'table'){
+
+    listEl.hidden = true;
+
+    tableWrap.hidden = false;
+
+    renderWagonTable();
+
+  }else{
+
+    listEl.hidden = false;
+
+    tableWrap.hidden = true;
+
+    const items =
+      currentWagonItems();
+
+    const visible =
+      visibleWagonItems();
+
+    if(!items.length){
+
+      listEl.innerHTML =
+        '<div class="empty">В этом вагоне пока нет товаров.<br>Нажмите «+», чтобы выдать первый.</div>';
+
+    }else if(!visible.length){
+
+      listEl.innerHTML =
+        `<div class="empty">Ничего не найдено по «${escapeHtml(searchQuery)}».</div>`;
+
+    }else{
+
+      listEl.innerHTML =
+        visible
+          .map(rowHtml)
+          .join('');
+
+    }
+
+    attachItemHandlers();
+
+  }
+
+}
+
+/* =========================================================
+   WAGON TABLE
+========================================================= */
+
+function renderWagonTable(){
+
+  const items =
+    currentWagonItems();
+
+  const visible =
+    visibleWagonItems();
+
+  if(!items.length){
+
+    tableWrap.innerHTML =
+      '<div class="empty">В этом вагоне пока нет товаров.</div>';
+
+    return;
+  }
+
+  if(!visible.length){
+
+    tableWrap.innerHTML =
+      `<div class="empty">Ничего не найдено по «${escapeHtml(searchQuery)}».</div>`;
+
+    return;
+  }
+
+  let totalRevenue = 0;
+
+  const rows =
+    visible
+      .map(it => {
+
+        const issued =
+          it.issued || 0;
+
+        const sold =
+          it.sold || 0;
+
+        const restockQty =
+          restockTotal(it);
+
+        const restockLabel =
+          (it.restocks || []).length
+            ? (it.restocks || [])
+                .map(
+                  r =>
+                    r.qty +
+                    (
+                      r.source
+                        ? '(' +
+                          escapeHtml(r.source) +
+                          ')'
+                        : ''
+                    )
+                )
+                .join(', ')
+            : '—';
+
+        const rest =
+          issued +
+          restockQty -
+          sold;
+
+        const revenue =
+          sold *
+          (it.price || 0);
+
+        totalRevenue += revenue;
+
+        let restClass = '';
+
+        if(rest <= 0){
+          restClass =
+            'rest-zero';
+        }else if(rest <= 2){
+          restClass =
+            'rest-low';
+        }
+
+        return `
+          <tr>
+
+            <td>
+              ${escapeHtml(it.name)}
+            </td>
+
+            <td class="mono">
+              ${money(it.price || 0)}
+            </td>
+
+            <td class="mono">
+              ${issued}
+            </td>
+
+            <td>
+              ${escapeHtml(restockLabel)}
+            </td>
+
+            <td class="mono">
+              ${sold}
+            </td>
+
+            <td class="mono ${restClass}">
+              ${rest}
+            </td>
+
+            <td class="mono">
+              ${money(revenue)}
+            </td>
+
+          </tr>
+        `;
+
+      })
+      .join('');
+
+  tableWrap.innerHTML = `
+
+    <table class="ledger">
+
+      <thead>
+
+        <tr>
+          <th>Товар</th>
+          <th class="mono">Цена</th>
+          <th class="mono">Выдано</th>
+          <th>Добор</th>
+          <th class="mono">Продано</th>
+          <th class="mono">Остаток</th>
+          <th class="mono">Выручка</th>
+        </tr>
+
+      </thead>
+
+      <tbody>
+        ${rows}
+      </tbody>
+
+      <tfoot>
+
+        <tr>
+          <td colspan="6">Итого</td>
+          <td class="mono">
+            ${money(totalRevenue)}
+          </td>
+        </tr>
+
+      </tfoot>
+
+    </table>
+
+  `;
+
+}
+
+/* =========================================================
+   WAGON ROW
+========================================================= */
+
+function rowHtml(it){
+
+  const issued =
+    it.issued || 0;
+
+  const soldQ =
+    it.sold || 0;
+
+  const restocks =
+    it.restocks || [];
+
+  const restockQty =
+    restockTotal(it);
+
+  const rest =
+    issued +
+    restockQty -
+    soldQ;
+
+  const revenue =
+    soldQ *
+    (it.price || 0);
+
+  let restClass =
+    'rest-ok';
+
+  if(rest <= 0){
+    restClass =
+      'rest-zero';
+  }else if(rest <= 2){
+    restClass =
+      'rest-low';
+  }
+
+  const maxSell =
+    rest > 0
+      ? rest
+      : 0;
+
+  const chips =
+    restocks
+      .map(
+        r => `
+          <span
+            class="chip"
+            data-rid="${r.id}"
+          >
+
+            <b>
+              ${r.qty > 0 ? '+' : ''}
+              ${r.qty}
+            </b>
+
+            ${
+              r.source
+                ? ' · ' +
+                  escapeHtml(r.source)
+                : ''
+            }
+
+            <button
+              class="chip-x"
+              title="Удалить"
+            >
+              ✕
+            </button>
+
+          </span>
+        `
+      )
+      .join('');
+
+  return `
+
+    <div
+      class="item"
+      data-id="${it.id}"
+    >
+
+      <div class="item-head">
+
+        <input
+          class="item-name"
+          value="${escapeAttr(it.name)}"
+          data-field="name"
+        >
+
+        ${
+          pendingDelete.has(it.id)
+
+            ? `
+
+              <button
+                class="icon-btn confirm-del-btn"
+              >
+                Удалить?
+              </button>
+
+              <button
+                class="icon-btn cancel-del-btn"
+              >
+                ↩
+              </button>
+
+            `
+
+            : `
+
+              <button
+                class="icon-btn del-btn"
+                title="Удалить"
+              >
+                ✕
+              </button>
+
+            `
+        }
+
+      </div>
+
+      <div class="field-row">
+
+        <div class="field">
+
+          <label>
+            Цена
+          </label>
+
+          <input
+            class="mono"
+            type="number"
+            step="0.01"
+            min="0"
+            value="${it.price || 0}"
+            data-field="price"
+          >
+
+        </div>
+
+        <div class="field">
+
+          <label>
+            Выдано
+          </label>
+
+          <input
+            class="mono"
+            type="number"
+            min="0"
+            value="${issued}"
+            data-field="issued"
+          >
+
+        </div>
+
+      </div>
+
+      <div class="restock-section">
+
+        <div class="restock-title">
+          Добор / перемещение
+        </div>
+
+        <div class="restock-chips">
+          ${chips}
+        </div>
+
+        <div class="restock-add">
+
+          <input
+            type="number"
+            name="rqty"
+            min="1"
+            value="1"
+          >
+
+          <input
+            type="text"
+            name="rsrc"
+            placeholder="Откуда (склад, вагон №…)"
+          >
+
+          <button
+            class="restock-add-btn"
+          >
+            Добавить
+          </button>
+
+        </div>
+
+      </div>
+
+      <div class="stats-row">
+
+        <div class="cell">
+          <span>продано</span>
+          <b class="mono">
+            ${soldQ}
+          </b>
+        </div>
+
+        <div class="cell">
+          <span>остаток</span>
+          <b class="mono ${restClass}">
+            ${rest}
+          </b>
+        </div>
+
+        <div class="cell">
+          <span>выручка</span>
+          <b class="mono">
+            ${money(revenue)}
+          </b>
+        </div>
+
+      </div>
+
+      <div class="action-row">
+
+        <input
+          class="qty-input mono sell-qty"
+          type="number"
+          min="1"
+          value="1"
+        >
+
+        <button
+          class="btn-sell"
+          ${maxSell <= 0 ? 'disabled' : ''}
+        >
+          Продать
+        </button>
+
+        <button
+          class="btn-undo"
+          ${soldQ <= 0 ? 'disabled' : ''}
+          title="Отменить продажу"
+        >
+          ↺
+        </button>
+
+      </div>
+
+    </div>
+
+  `;
+
+}
+
+/* =========================================================
+   ITEM HANDLERS
+========================================================= */
+
+function attachItemHandlers(){
+
+  listEl
+    .querySelectorAll('.item')
+    .forEach(card => {
+
+      const id =
+        card.dataset.id;
+
+      const item =
+        allItems.find(
+          i => i.id === id
+        );
+
+      if(!item){
+        return;
+      }
+
+      card
+        .querySelectorAll('[data-field]')
+        .forEach(input => {
+
+          input.addEventListener(
+            'change',
+            () => {
+
+              const field =
+                input.dataset.field;
+
+              let val =
+                input.value;
+
+              if(field === 'price'){
+
+                val =
+                  Math.max(
+                    0,
+                    parseFloat(val) || 0
+                  );
+
+              }
+
+              if(field === 'issued'){
+
+                val =
+                  Math.max(
+                    0,
+                    parseInt(val) || 0
+                  );
+
+              }
+
+              if(field === 'name'){
+
+                val =
+                  val.trim() ||
+                  item.name;
+
+              }
+
+              item[field] =
+                val;
+
+              saveState();
+
+              renderWagonView();
+
+            }
+          );
+
+        });
+
+      /* DELETE ITEM */
+
+      const delBtn =
+        card.querySelector('.del-btn');
+
+      if(delBtn){
+
+        delBtn.addEventListener(
+          'click',
+          () => {
+
+            pendingDelete.add(id);
+
+            renderWagonView();
+
+          }
+        );
+
+      }
+
+      const confirmDelBtn =
+        card.querySelector(
+          '.confirm-del-btn'
+        );
+
+      if(confirmDelBtn){
+
+        confirmDelBtn.addEventListener(
+          'click',
+          () => {
+
+            pendingDelete.delete(id);
+
+            allItems =
+              allItems.filter(
+                i => i.id !== id
+              );
+
+            state.items =
+              allItems;
+
+            saveState();
+
+            renderWagonView();
+
+          }
+        );
+
+      }
+
+      const cancelDelBtn =
+        card.querySelector(
+          '.cancel-del-btn'
+        );
+
+      if(cancelDelBtn){
+
+        cancelDelBtn.addEventListener(
+          'click',
+          () => {
+
+            pendingDelete.delete(id);
+
+            renderWagonView();
+
+          }
+        );
+
+      }
+
+      /* SELL */
+
+      card
+        .querySelector('.btn-sell')
+        .addEventListener(
+          'click',
+          () => {
+
+            const qtyInput =
+              card.querySelector(
+                '.sell-qty'
+              );
+
+            let qty =
+              parseInt(
+                qtyInput.value
+              ) || 0;
+
+            const rest =
+              itemRemaining(item);
+
+            if(qty <= 0){
+              return;
+            }
+
+            if(qty > rest){
+              qty = rest;
+            }
+
+            if(qty <= 0){
+              return;
+            }
+
+            item.sold =
+              (item.sold || 0) +
+              qty;
+
+            qtyInput.value = 1;
+
+            saveState();
+
+            renderWagonView();
+
+          }
+        );
+
+      /* UNDO SELL */
+
+      card
+        .querySelector('.btn-undo')
+        .addEventListener(
+          'click',
+          () => {
+
+            const qtyInput =
+              card.querySelector(
+                '.sell-qty'
+              );
+
+            let qty =
+              parseInt(
+                qtyInput.value
+              ) || 1;
+
+            const current =
+              item.sold || 0;
+
+            if(current <= 0){
+              return;
+            }
+
+            if(qty > current){
+              qty = current;
+            }
+
+            item.sold =
+              current - qty;
+
+            qtyInput.value = 1;
+
+            saveState();
+
+            renderWagonView();
+
+          }
+        );
+
+      /* RESTOCK */
+
+      card
+        .querySelector(
+          '.restock-add-btn'
+        )
+        .addEventListener(
+          'click',
+          () => {
+
+            const qtyInput =
+              card.querySelector(
+                'input[name=rqty]'
+              );
+
+            const srcInput =
+              card.querySelector(
+                'input[name=rsrc]'
+              );
+
+            const qty =
+              Math.max(
+                1,
+                parseInt(
+                  qtyInput.value
+                ) || 0
+              );
+
+            const source =
+              srcInput.value.trim();
+
+            item.restocks = [
+              ...(item.restocks || []),
+              {
+                id:uid(),
+                qty,
+                source
+              }
+            ];
+
+            qtyInput.value = 1;
+            srcInput.value = '';
+
+            saveState();
+
+            renderWagonView();
+
+          }
+        );
+
+      /* REMOVE RESTOCK */
+
+      card
+        .querySelectorAll('.chip')
+        .forEach(chip => {
+
+          chip
+            .querySelector('.chip-x')
+            .addEventListener(
+              'click',
+              () => {
+
+                const rid =
+                  chip.dataset.rid;
+
+                item.restocks =
+                  (item.restocks || [])
+                    .filter(
+                      r =>
+                        r.id !== rid
+                    );
+
+                saveState();
+
+                renderWagonView();
+
+              }
+            );
+
+        });
+
+    });
+
+}
+
+/* =========================================================
+   📦 ADD ONE OF EACH CATALOG ITEM
+========================================================= */
+
+function issueWholeCatalog(wagonId){
+
+  if(!wagonId){
+    return;
+  }
+
+  if(!catalog.length){
+
+    setStatus(
+      'Каталог пуст.'
+    );
+
+    return;
+  }
+
+  let changed = 0;
+
+  catalog.forEach(c => {
+
+    let item =
+      allItems.find(
+        it =>
+          it.wagonId === wagonId &&
+          it.catalogId === c.id
+      );
+
+    if(!item){
+
+      item = {
+        id:uid(),
+        wagonId,
+        catalogId:c.id,
+        name:c.name,
+        price:c.price,
+        issued:0,
+        sold:0,
+        restocks:[],
+        createdAt:Date.now()
+      };
+
+      allItems.push(item);
+
+    }
+
+    /*
+      ВАЖНО:
+
+      Каждое нажатие 📦 увеличивает
+      выданное количество на 1.
+
+      1-е нажатие: 1
+      2-е нажатие: 2
+      3-е нажатие: 3
+      ...
+    */
+
+    item.issued =
+      (Number(item.issued) || 0) + 1;
+
+    changed++;
+
+  });
+
+  state.items =
+    allItems;
+
+  saveState();
+
+  showToast(
+    `📦 Выдано по 1 шт. для ${changed} товаров`
+  );
+
+  renderMain();
+
+}
+
+/* =========================================================
+   ISSUE MODAL
+========================================================= */
+
+const cancelAddBtn =
+  document.getElementById(
+    'cancelAddBtn'
+  );
+
+const issueCatalogSelect =
+  document.getElementById(
+    'issueCatalogSelect'
+  );
+
+const issueEmptyHint =
+  document.getElementById(
+    'issueEmptyHint'
+  );
+
+const issueSubmitBtn =
+  document.getElementById(
+    'issueSubmitBtn'
+  );
+
+let issueTargetWagonId = null;
+
+function openAddModal(wagonId){
+
+  issueTargetWagonId =
+    wagonId ||
+    currentWagonId;
+
+  if(!catalog.length){
+
+    issueCatalogSelect.hidden =
+      true;
+
+    addForm
+      .querySelector(
+        'input[name=issued]'
+      )
+      .hidden = true;
+
+    issueEmptyHint.hidden =
+      false;
+
+    issueSubmitBtn.hidden =
+      true;
+
+  }else{
+
+    issueCatalogSelect.hidden =
+      false;
+
+    addForm
+      .querySelector(
+        'input[name=issued]'
+      )
+      .hidden = false;
+
+    issueEmptyHint.hidden =
+      true;
+
+    issueSubmitBtn.hidden =
+      false;
+
+    issueCatalogSelect.innerHTML =
+      catalog
+        .map(
+          c =>
+            `<option value="${c.id}">
+              ${escapeHtml(c.name)}
+              — ${money(c.price || 0)}
+            </option>`
+        )
+        .join('');
+
+  }
+
+  addOverlay.hidden = false;
+
+  addForm.reset();
+
+  setTimeout(
+    () => {
+
+      if(!issueCatalogSelect.hidden){
+        issueCatalogSelect.focus();
+      }else{
+        document
+          .getElementById(
+            'goToCatalogBtn'
+          )
+          .focus?.();
+      }
+
+    },
+    30
+  );
+
+}
+
+function closeAddModal(){
+
+  addOverlay.hidden =
+    true;
+
+}
+
+cancelAddBtn.addEventListener(
+  'click',
+  closeAddModal
+);
+
+addOverlay.addEventListener(
+  'click',
+  e => {
+
+    if(e.target === addOverlay){
+      closeAddModal();
+    }
+
+  }
+);
+
+document
+  .getElementById(
+    'goToCatalogBtn'
+  )
+  .addEventListener(
+    'click',
+    () => {
+
+      closeAddModal();
+
+      openCatalogModal();
+
+    }
+  );
+
+addForm.addEventListener(
+  'submit',
+  e => {
+
+    e.preventDefault();
+
+    if(!issueTargetWagonId){
+      return;
+    }
+
+    const fd =
+      new FormData(addForm);
+
+    const catalogId =
+      fd.get('catalogId');
+
+    const issued =
+      Math.max(
+        0,
+        parseInt(
+          fd.get('issued')
+        ) || 0
+      );
+
+    const match =
+      catalog.find(
+        c => c.id === catalogId
+      );
+
+    if(!match){
+      return;
+    }
+
+    allItems.push({
+
+      id:uid(),
+
+      wagonId:
+        issueTargetWagonId,
+
+      catalogId:
+        match.id,
+
+      name:
+        match.name,
+
+      price:
+        match.price,
+
+      issued,
+
+      sold:0,
+
+      restocks:[],
+
+      createdAt:
+        Date.now()
+
+    });
+
+    state.items =
+      allItems;
+
+    saveState();
+
+    closeAddModal();
+
+    showToast(
+      `Товар «<b>${escapeHtml(match.name)}</b>» выдан`
+    );
+
+    renderMain();
+
+  }
+);
+
+/* =========================================================
+   TRANSFERS
+========================================================= */
+
+const transferFromWagon =
+  document.getElementById(
+    'transferFromWagon'
+  );
+
+const transferItem =
+  document.getElementById(
+    'transferItem'
+  );
+
+const transferToWagon =
+  document.getElementById(
+    'transferToWagon'
+  );
+
+const transferHint =
+  document.getElementById(
+    'transferHint'
+  );
+
+function openTransferModal(fromWagonId){
+
+  transferFromWagon.innerHTML =
+    wagons
+      .map(
+        w =>
+          `<option value="${w.id}">
+            ${escapeHtml(w.name)}
+          </option>`
+      )
+      .join('');
+
+  transferFromWagon.value =
+    fromWagonId ||
+    currentWagonId ||
+    '';
+
+  populateTransferItems();
+
+  populateTransferToWagons();
+
+  transferOverlay.hidden =
+    false;
+
+  setTimeout(
+    () => {
+      transferFromWagon.focus();
+    },
+    30
+  );
+
+}
+
+function closeTransferModal(){
+
+  transferOverlay.hidden =
+    true;
+
+}
+
+function populateTransferItems(){
+
+  const fromId =
+    transferFromWagon.value;
+
+  const items =
+    allItems.filter(
+      it =>
+        it.wagonId === fromId
+    );
+
+  if(!items.length){
+
+    transferItem.innerHTML =
+      '<option value="">Нет товаров в этом вагоне</option>';
+
+    transferHint.textContent =
+      '';
+
+    return;
+  }
+
+  transferItem.innerHTML =
+    items
+      .map(
+        it => {
+
+          const rest =
+            itemRemaining(it);
+
+          return `
+            <option value="${it.id}">
+              ${escapeHtml(it.name)}
+              (остаток: ${rest})
+            </option>
+          `;
+
+        }
+      )
+      .join('');
+
+  updateTransferHint();
+
+}
+
+function populateTransferToWagons(){
+
+  const fromId =
+    transferFromWagon.value;
+
+  transferToWagon.innerHTML =
+    wagons
+      .filter(
+        w => w.id !== fromId
+      )
+      .map(
+        w =>
+          `<option value="${w.id}">
+            ${escapeHtml(w.name)}
+          </option>`
+      )
+      .join('');
+
+}
+
+function updateTransferHint(){
+
+  const item =
+    allItems.find(
+      it =>
+        it.id ===
+        transferItem.value
+    );
+
+  if(item){
+
+    const rest =
+      itemRemaining(item);
+
+    transferHint.textContent =
+      `Доступно: ${rest} шт.`;
+
+  }else{
+
+    transferHint.textContent =
+      '';
+
+  }
+
+}
+
+transferFromWagon.addEventListener(
+  'change',
+  () => {
+
+    populateTransferItems();
+
+    populateTransferToWagons();
+
+  }
+);
+
+transferItem.addEventListener(
+  'change',
+  updateTransferHint
+);
+
+document
+  .getElementById(
+    'cancelTransferBtn'
+  )
+  .addEventListener(
+    'click',
+    closeTransferModal
+  );
+
+transferOverlay.addEventListener(
+  'click',
+  e => {
+
+    if(e.target === transferOverlay){
+      closeTransferModal();
+    }
+
+  }
+);
+
+transferForm.addEventListener(
+  'submit',
+  e => {
+
+    e.preventDefault();
+
+    const fromId =
+      transferFromWagon.value;
+
+    const toId =
+      transferToWagon.value;
+
+    const itemId =
+      transferItem.value;
+
+    const item =
+      allItems.find(
+        it =>
+          it.id === itemId
+      );
+
+    if(
+      !item ||
+      !toId ||
+      fromId === toId
+    ){
+      return;
+    }
+
+    const fd =
+      new FormData(transferForm);
+
+    let qty =
+      Math.max(
+        1,
+        parseInt(
+          fd.get('qty')
+        ) || 0
+      );
+
+    const rest =
+      itemRemaining(item);
+
+    if(qty > rest){
+      qty = rest;
+    }
+
+    if(qty <= 0){
+      return;
+    }
+
+    /* Уменьшаем остаток источника */
+
+    item.restocks = [
+      ...(item.restocks || []),
+      {
+        id:uid(),
+        qty:-qty,
+        source:'в ' +
+          wagonName(toId)
+      }
+    ];
+
+    /* Ищем товар в вагоне назначения */
+
+    let destItem =
+      allItems.find(
+        it =>
+          it.wagonId === toId &&
+          it.catalogId &&
+          it.catalogId ===
+            item.catalogId
+      );
+
+    const entry = {
+      id:uid(),
+      qty,
+      source:
+        'от ' +
+        wagonName(fromId)
+    };
+
+    if(destItem){
+
+      destItem.restocks = [
+        ...(destItem.restocks || []),
+        entry
+      ];
+
+    }else{
+
+      allItems.push({
+
+        id:uid(),
+
+        wagonId:
+          toId,
+
+        catalogId:
+          item.catalogId || null,
+
+        name:
+          item.name,
+
+        price:
+          item.price,
+
+        issued:0,
+
+        sold:0,
+
+        restocks:[
+          entry
+        ],
+
+        createdAt:
+          Date.now()
+
+      });
+
+    }
+
+    state.items =
+      allItems;
+
+    /*
+      История перемещения
+    */
+
+    allTransfers.push({
+
+      id:uid(),
+
+      itemName:
+        item.name,
+
+      fromWagonId:
+        fromId,
+
+      toWagonId:
+        toId,
+
+      qty,
+
+      ts:
+        Date.now()
+
+    });
+
+    state.transfers =
+      allTransfers;
+
+    saveState();
+
+    closeTransferModal();
+
+    showToast(
+      `Перемещено «<b>${escapeHtml(item.name)}</b>»: ${qty} шт.`
+    );
+
+    renderMain();
+
+  }
+);
+
+/* =========================================================
+   RECEIPTS
+========================================================= */
+
+let receiptsFilterWagonId = '';
+
+function renderReceiptsView(){
+
+  const select =
+    document.getElementById(
+      'receiptWagonSelect'
+    );
+
+  select.innerHTML =
+    wagons
+      .map(
+        w =>
+          `<option value="${w.id}">
+            ${escapeHtml(w.name)}
+          </option>`
+      )
+      .join('');
+
+  if(currentWagonId){
+    select.value =
+      currentWagonId;
+  }
+
+  const filterSelect =
+    document.getElementById(
+      'receiptsFilterWagon'
+    );
+
+  filterSelect.innerHTML =
+    '<option value="">Все вагоны</option>' +
+    wagons
+      .map(
+        w =>
+          `<option value="${w.id}">
+            ${escapeHtml(w.name)}
+          </option>`
+      )
+      .join('');
+
+  filterSelect.value =
+    receiptsFilterWagonId;
+
+  const filtered =
+    receiptsFilterWagonId
+      ? allReceipts.filter(
+          r =>
+            r.wagonId ===
+            receiptsFilterWagonId
+        )
+      : allReceipts;
+
+  const total =
+    filtered.reduce(
+      (s,r) =>
+        s + (r.amount || 0),
+      0
+    );
+
+  document
+    .getElementById(
+      'allReceiptsSum'
+    )
+    .textContent =
+      money(total);
+
+  document
+    .getElementById(
+      'allReceiptsSumLabel'
+    )
+    .textContent =
+      receiptsFilterWagonId
+        ? `безнал — ${wagonName(receiptsFilterWagonId)}`
+        : 'всего безнал';
+
+  const byWagonWrap =
+    document.getElementById(
+      'receiptsByWagonTable'
+    );
+
+  const byWagonOuter =
+    document.getElementById(
+      'receiptsByWagonWrap'
+    );
+
+  if(
+    receiptsFilterWagonId ||
+    !wagons.length
+  ){
+
+    byWagonOuter.hidden =
+      true;
+
+    byWagonWrap.innerHTML =
+      '';
+
+  }else{
+
+    byWagonOuter.hidden =
+      false;
+
+    const rows =
+      wagons
+        .map(
+          w => {
+
+            const sum =
+              allReceipts
+                .filter(
+                  r =>
+                    r.wagonId ===
+                    w.id
+                )
+                .reduce(
+                  (s,r) =>
+                    s +
+                    (r.amount || 0),
+                  0
+                );
+
+            return `
+              <tr>
+
+                <td>
+                  ${escapeHtml(w.name)}
+                </td>
+
+                <td class="mono">
+                  ${money(sum)}
+                </td>
+
+              </tr>
+            `;
+
+          }
+        )
+        .join('');
+
+    byWagonWrap.innerHTML = `
+
+      <table class="ledger">
+
+        <thead>
+
+          <tr>
+            <th>Вагон</th>
+            <th class="mono">Безнал</th>
+          </tr>
+
+        </thead>
+
+        <tbody>
+          ${rows}
+        </tbody>
+
+      </table>
+
+    `;
+
+  }
+
+  const listWrap =
+    document.getElementById(
+      'receiptsList'
+    );
+
+  if(!filtered.length){
+
+    listWrap.innerHTML =
+      '<div class="empty">Чеков пока нет.</div>';
+
+  }else{
+
+    const sorted =
+      [...filtered]
+        .sort(
+          (a,b) =>
+            (b.ts || 0) -
+            (a.ts || 0)
+        );
+
+    listWrap.innerHTML =
+      sorted
+        .map(
+          r => {
+
+            const t =
+              r.ts
+                ? new Date(r.ts)
+                    .toLocaleString(
+                      'ru-RU',
+                      {
+                        day:'2-digit',
+                        month:'2-digit',
+                        hour:'2-digit',
+                        minute:'2-digit'
+                      }
+                    )
+                : '';
+
+            return `
+
+              <div
+                class="receipt-entry"
+                data-id="${r.id}"
+              >
+
+                <div class="re-left">
+
+                  <span class="re-wagon">
+                    ${escapeHtml(
+                      wagonName(r.wagonId)
+                    )}
+                  </span>
+
+                  <span class="re-amt mono">
+                    ${money(r.amount || 0)}
+                  </span>
+
+                  <span class="re-time">
+                    ${t}
+                  </span>
+
+                </div>
+
+                <button
+                  class="receipt-del"
+                  title="Удалить чек"
+                >
+                  ✕
+                </button>
+
+              </div>
+
+            `;
+
+          }
+        )
+        .join('');
+
+    listWrap
+      .querySelectorAll(
+        '.receipt-entry'
+      )
+      .forEach(row => {
+
+        row
+          .querySelector(
+            '.receipt-del'
+          )
+          .addEventListener(
+            'click',
+            () => {
+
+              allReceipts =
+                allReceipts.filter(
+                  r =>
+                    r.id !==
+                    row.dataset.id
+                );
+
+              state.receipts =
+                allReceipts;
+
+              saveState();
+
+              renderReceiptsView();
+
+            }
+          );
+
+      });
+
+  }
+
+}
+
+document
+  .getElementById(
+    'receiptsFilterWagon'
+  )
+  .addEventListener(
+    'change',
+    e => {
+
+      receiptsFilterWagonId =
+        e.target.value;
+
+      renderReceiptsView();
+
+    }
+  );
+
+document
+  .getElementById(
+    'receiptAddBtn'
+  )
+  .addEventListener(
+    'click',
+    () => {
+
+      const wid =
+        document
+          .getElementById(
+            'receiptWagonSelect'
+          )
+          .value;
+
+      const amtInput =
+        document.getElementById(
+          'receiptAmount'
+        );
+
+      const amount =
+        parseFloat(
+          amtInput.value
+        );
+
+      if(
+        !wid ||
+        !amount ||
+        amount <= 0
+      ){
+        return;
+      }
+
+      allReceipts.push({
+
+        id:uid(),
+
+        wagonId:
+          wid,
+
+        amount,
+
+        ts:
+          Date.now()
+
+      });
+
+      state.receipts =
+        allReceipts;
+
+      amtInput.value =
+        '';
+
+      saveState();
+
+      renderReceiptsView();
+
+      amtInput.focus();
+
+    }
+  );
+
+/* =========================================================
+   SUMMARY
+========================================================= */
+
+function renderSummaryView(){
+
+  let totalRevenue = 0;
+  let totalRemainingValue = 0;
+
+  allItems.forEach(it => {
+
+    const remaining =
+      itemRemaining(it);
+
+    const valueIssued =
+      (
+        (it.issued || 0) +
+        restockTotal(it)
+      ) *
+      (it.price || 0);
+
+    const valueRemaining =
+      remaining *
+      (it.price || 0);
+
+    totalRevenue +=
+      valueIssued -
+      valueRemaining;
+
+    totalRemainingValue +=
+      valueRemaining;
+
+  });
+
+  const totalNoncash =
+    allReceipts.reduce(
+      (s,r) =>
+        s + (r.amount || 0),
+      0
+    );
+
+  document
+    .getElementById(
+      'sumRevenue'
+    )
+    .textContent =
+      money(totalRevenue);
+
+  document
+    .getElementById(
+      'sumRemainingValue'
+    )
+    .textContent =
+      money(totalRemainingValue);
+
+  document
+    .getElementById(
+      'sumNoncash'
+    )
+    .textContent =
+      money(totalNoncash);
+
+  document
+    .getElementById(
+      'sumCash'
+    )
+    .textContent =
+      money(
+        totalRevenue -
+        totalNoncash
+      );
+
+  if(!wagons.length){
+
+    document
+      .getElementById(
+        'summaryTable'
+      )
+      .innerHTML =
+        '<div class="empty">Нет вагонов.</div>';
+
+    return;
+  }
+
+  const rows =
+    wagons
+      .map(w => {
+
+        const items =
+          allItems.filter(
+            it =>
+              it.wagonId ===
+              w.id
+          );
+
+        let revenue = 0;
+        let remainingQty = 0;
+        let remainingValue = 0;
+        let sold = 0;
+
+        items.forEach(it => {
+
+          const remaining =
+            itemRemaining(it);
+
+          const valueIssued =
+            (
+              (it.issued || 0) +
+              restockTotal(it)
+            ) *
+            (it.price || 0);
+
+          revenue +=
+            valueIssued -
+            remaining *
+              (it.price || 0);
+
+          remainingQty +=
+            remaining;
+
+          remainingValue +=
+            remaining *
+            (it.price || 0);
+
+          sold +=
+            it.sold || 0;
+
+        });
+
+        const receipts =
+          allReceipts
+            .filter(
+              r =>
+                r.wagonId ===
+                w.id
+            )
+            .reduce(
+              (s,r) =>
+                s +
+                (r.amount || 0),
+              0
+            );
+
+        return `
+
+          <tr data-wid="${w.id}">
+
+            <td>
+              ${escapeHtml(w.name)}
+            </td>
+
+            <td class="mono">
+              ${sold}
+            </td>
+
+            <td class="mono">
+              ${money(revenue)}
+            </td>
+
+            <td class="mono">
+              ${remainingQty}
+            </td>
+
+            <td class="mono">
+              ${money(remainingValue)}
+            </td>
+
+            <td class="mono">
+              ${money(receipts)}
+            </td>
+
+            <td class="mono">
+              ${money(revenue - receipts)}
+            </td>
+
+            <td>
+
+              <button
+                class="sum-issue-btn"
+                title="Выдать товар в этот вагон"
+              >
+                +
+              </button>
+
+              <button
+                class="sum-transfer-btn"
+                title="Переместить из этого вагона"
+              >
+                🔁
+              </button>
+
+            </td>
+
+          </tr>
+
+        `;
+
+      })
+      .join('');
+
+  document
+    .getElementById(
+      'summaryTable'
+    )
+    .innerHTML = `
+
+      <table class="ledger">
+
+        <thead>
+
+          <tr>
+
+            <th>Вагон</th>
+            <th class="mono">Продано</th>
+            <th class="mono">Выручка</th>
+            <th class="mono">Остаток шт</th>
+            <th class="mono">Остаток р.</th>
+            <th class="mono">Безнал</th>
+            <th class="mono">Нал</th>
+            <th></th>
+
+          </tr>
+
+        </thead>
+
+        <tbody>
+          ${rows}
+        </tbody>
+
+      </table>
+
+    `;
+
+  document
+    .getElementById(
+      'summaryTable'
+    )
+    .querySelectorAll(
+      'tr[data-wid]'
+    )
+    .forEach(row => {
+
+      const wid =
+        row.dataset.wid;
+
+      row
+        .querySelector(
+          '.sum-issue-btn'
+        )
+        .addEventListener(
+          'click',
+          () =>
+            openAddModal(wid)
+        );
+
+      row
+        .querySelector(
+          '.sum-transfer-btn'
+        )
+        .addEventListener(
+          'click',
+          () =>
+            openTransferModal(wid)
+        );
+
+    });
+
+}
+
+/* =========================================================
+   CATALOG
+========================================================= */
+
+function renderCatalogView(){
+
+  const listWrap =
+    document.getElementById(
+      'catalogList'
+    );
+
+  if(!catalog.length){
+
+    listWrap.innerHTML =
+      '<div class="empty">Каталог пуст.<br>Нажмите «+», чтобы добавить товар.</div>';
+
+    return;
+  }
+
+  listWrap.innerHTML =
+    catalog
+      .map(
+        c => `
+
+          <div
+            class="catalog-row"
+            data-id="${c.id}"
+          >
+
+            <div class="cat-name">
+              ${escapeHtml(c.name)}
+            </div>
+
+            <input
+              name="catprice"
+              type="number"
+              step="0.01"
+              min="0"
+              value="${c.price || 0}"
+            >
+
+            ${
+              pendingDelete.has(
+                'c_' + c.id
+              )
+
+                ? `
+
+                  <button
+                    class="icon-btn confirm-del-btn"
+                  >
+                    Удалить?
+                  </button>
+
+                `
+
+                : `
+
+                  <button
+                    class="icon-btn del-btn"
+                    title="Удалить товар"
+                  >
+                    ✕
+                  </button>
+
+                `
+            }
+
+          </div>
+
+        `
+      )
+      .join('');
+
+  listWrap
+    .querySelectorAll(
+      '.catalog-row'
+    )
+    .forEach(row => {
+
+      const id =
+        row.dataset.id;
+
+      row
+        .querySelector(
+          'input[name=catprice]'
+        )
+        .addEventListener(
+          'change',
+          e => {
+
+            const price =
+              Math.max(
+                0,
+                parseFloat(
+                  e.target.value
+                ) || 0
+              );
+
+            const c =
+              catalog.find(
+                c =>
+                  c.id === id
+              );
+
+            if(c){
+
+              c.price =
+                price;
+
+              saveState();
+
+            }
+
+          }
+        );
+
+      const delBtn =
+        row.querySelector(
+          '.del-btn'
+        );
+
+      if(delBtn){
+
+        delBtn.addEventListener(
+          'click',
+          () => {
+
+            pendingDelete.add(
+              'c_' + id
+            );
+
+            renderCatalogView();
+
+          }
+        );
+
+      }
+
+      const confirmBtn =
+        row.querySelector(
+          '.confirm-del-btn'
+        );
+
+      if(confirmBtn){
+
+        confirmBtn.addEventListener(
+          'click',
+          () => {
+
+            pendingDelete.delete(
+              'c_' + id
+            );
+
+            catalog =
+              catalog.filter(
+                c =>
+                  c.id !== id
+              );
+
+            state.catalog =
+              catalog;
+
+            saveState();
+
+            renderCatalogView();
+
+          }
+        );
+
+      }
+
+    });
+
+}
+
+/* =========================================================
+   TRANSFERS HISTORY
+========================================================= */
+
+function renderTransfersView(){
+
+  const wrap =
+    document.getElementById(
+      'transfersTable'
+    );
+
+  if(!allTransfers.length){
+
+    wrap.innerHTML =
+      '<div class="empty">Перемещений пока не было.<br>Нажмите «+», чтобы переместить товар.</div>';
+
+    return;
+  }
+
+  const sorted =
+    [...allTransfers]
+      .sort(
+        (a,b) =>
+          (b.ts || 0) -
+          (a.ts || 0)
+      );
+
+  const rows =
+    sorted
+      .map(t => {
+
+        const d =
+          t.ts
+            ? new Date(t.ts)
+                .toLocaleString(
+                  'ru-RU',
+                  {
+                    day:'2-digit',
+                    month:'2-digit',
+                    hour:'2-digit',
+                    minute:'2-digit'
+                  }
+                )
+            : '';
+
+        const deleteKey =
+          'tr_' + t.id;
+
+        const deleteButton =
+          pendingDelete.has(deleteKey)
+
+            ? `
+
+              <button
+                class="table-action-btn table-action-confirm transfer-confirm-delete"
+              >
+                Удалить?
+              </button>
+
+              <button
+                class="table-action-btn transfer-cancel-delete"
+              >
+                ↩
+              </button>
+
+            `
+
+            : `
+
+              <button
+                class="table-action-btn transfer-delete"
+                title="Удалить запись"
+              >
+                ✕
+              </button>
+
+            `;
+
+        return `
+
+          <tr
+            data-transfer-id="${t.id}"
+          >
+
+            <td>
+              ${d}
+            </td>
+
+            <td>
+              ${escapeHtml(t.itemName)}
+            </td>
+
+            <td>
+              ${escapeHtml(
+                wagonName(
+                  t.fromWagonId
+                )
+              )}
+            </td>
+
+            <td>
+              ${escapeHtml(
+                wagonName(
+                  t.toWagonId
+                )
+              )}
+            </td>
+
+            <td class="mono">
+              ${t.qty}
+            </td>
+
+            <td>
+              ${deleteButton}
+            </td>
+
+          </tr>
+
+        `;
+
+      })
+      .join('');
+
+  wrap.innerHTML = `
+
+    <table class="ledger">
+
+      <thead>
+
+        <tr>
+
+          <th>Когда</th>
+          <th>Товар</th>
+          <th>Откуда</th>
+          <th>Куда</th>
+          <th class="mono">Кол-во</th>
+          <th></th>
+
+        </tr>
+
+      </thead>
+
+      <tbody>
+        ${rows}
+      </tbody>
+
+    </table>
+
+  `;
+
+  /*
+    Удаление истории перемещения.
+
+    ВАЖНО:
+    удаляется именно запись истории.
+    Само уже выполненное перемещение
+    НЕ откатывается.
+  */
+
+  wrap
+    .querySelectorAll(
+      'tr[data-transfer-id]'
+    )
+    .forEach(row => {
+
+      const id =
+        row.dataset.transferId;
+
+      const key =
+        'tr_' + id;
+
+      const deleteBtn =
+        row.querySelector(
+          '.transfer-delete'
+        );
+
+      if(deleteBtn){
+
+        deleteBtn.addEventListener(
+          'click',
+          () => {
+
+            pendingDelete.add(key);
+
+            renderTransfersView();
+
+            setTimeout(
+              () => {
+
+                if(
+                  pendingDelete.has(key)
+                ){
+
+                  pendingDelete.delete(
+                    key
+                  );
+
+                  renderTransfersView();
+
+                }
+
+              },
+              3000
+            );
+
+          }
+        );
+
+      }
+
+      const confirmBtn =
+        row.querySelector(
+          '.transfer-confirm-delete'
+        );
+
+      if(confirmBtn){
+
+        confirmBtn.addEventListener(
+          'click',
+          () => {
+
+            pendingDelete.delete(
+              key
+            );
+
+            allTransfers =
+              allTransfers.filter(
+                t =>
+                  t.id !== id
+              );
+
+            state.transfers =
+              allTransfers;
+
+            saveState();
+
+            renderTransfersView();
+
+            showToast(
+              'Запись перемещения удалена'
+            );
+
+          }
+        );
+
+      }
+
+      const cancelBtn =
+        row.querySelector(
+          '.transfer-cancel-delete'
+        );
+
+      if(cancelBtn){
+
+        cancelBtn.addEventListener(
+          'click',
+          () => {
+
+            pendingDelete.delete(
+              key
+            );
+
+            renderTransfersView();
+
+          }
+        );
+
+      }
+
+    });
+
+}
+
+/* =========================================================
+   CATALOG MODAL
+========================================================= */
+
+function openCatalogModal(){
+
+  addCatalogOverlay.hidden =
+    false;
+
+  addCatalogForm.reset();
+
+  setTimeout(
+    () => {
+
+      addCatalogForm
+        .querySelector(
+          'input[name=name]'
+        )
+        .focus();
+
+    },
+    30
+  );
+
+}
+
+document
+  .getElementById(
+    'cancelCatalogBtn'
+  )
+  .addEventListener(
+    'click',
+    () => {
+
+      addCatalogOverlay.hidden =
+        true;
+
+    }
+  );
+
+addCatalogOverlay.addEventListener(
+  'click',
+  e => {
+
+    if(
+      e.target ===
+      addCatalogOverlay
+    ){
+
+      addCatalogOverlay.hidden =
+        true;
+
+    }
+
+  }
+);
+
+addCatalogForm.addEventListener(
+  'submit',
+  e => {
+
+    e.preventDefault();
+
+    const fd =
+      new FormData(
+        addCatalogForm
+      );
+
+    const name =
+      (
+        fd.get('name') || ''
+      )
+      .toString()
+      .trim();
+
+    const price =
+      Math.max(
+        0,
+        parseFloat(
+          fd.get('price')
+        ) || 0
+      );
+
+    if(!name){
+      return;
+    }
+
+    catalog.push({
+
+      id:uid(),
+
+      name,
+
+      price,
+
+      createdAt:
+        Date.now()
+
+    });
+
+    state.catalog =
+      catalog;
+
+    saveState();
+
+    addCatalogOverlay.hidden =
+      true;
+
+    showToast(
+      `Товар «<b>${escapeHtml(name)}</b>» добавлен в каталог`
+    );
+
+    if(mainView === 'catalog'){
+      renderCatalogView();
+    }
+
+  }
+);
+
+/* =========================================================
+   HELP WINDOW
+========================================================= */
+
+function openHelp(){
+
+  helpOverlay.hidden =
+    false;
+
+  setTimeout(
+    () => {
+      closeHelpBtn.focus();
+    },
+    30
+  );
+
+}
+
+function closeHelp(){
+
+  helpOverlay.hidden =
+    true;
+
+}
+
+closeHelpBtn.addEventListener(
+  'click',
+  closeHelp
+);
+
+helpOverlay.addEventListener(
+  'click',
+  e => {
+
+    if(e.target === helpOverlay){
+      closeHelp();
+    }
+
+  }
+);
+
+document
+  .getElementById(
+    'navHelp'
+  )
+  .addEventListener(
+    'click',
+    () => {
+
+      closeSidebar();
+
+      openHelp();
+
+    }
+  );
+
+/* =========================================================
+   BACKUP EXPORT / IMPORT
+========================================================= */
+
+function downloadBlob(
+  filename,
+  mime,
+  text
+){
+
+  const blob =
+    new Blob(
+      [text],
+      {
+        type:mime
+      }
+    );
+
+  const url =
+    URL.createObjectURL(blob);
+
+  const a =
+    document.createElement(
+      'a'
+    );
+
+  a.href =
+    url;
+
+  a.download =
+    filename;
+
+  document.body.appendChild(a);
+
+  a.click();
+
+  document.body.removeChild(a);
+
+  setTimeout(
+    () =>
+      URL.revokeObjectURL(url),
+    2000
+  );
+
+}
+
+document
+  .getElementById(
+    'exportBtn'
+  )
+  .addEventListener(
+    'click',
+    () => {
+
+      const dateStr =
+        new Date()
+          .toISOString()
+          .slice(0,10);
+
+      downloadBlob(
+        `vagony-backup-${dateStr}.json`,
+        'application/json',
+        JSON.stringify(
+          state,
+          null,
+          2
+        )
+      );
+
+      setStatus(
+        'Копия сохранена.'
+      );
+
+    }
+  );
+
+document
+  .getElementById(
+    'importFile'
+  )
+  .addEventListener(
+    'change',
+    () => {
+
+      const file =
+        document
+          .getElementById(
+            'importFile'
+          )
+          .files[0];
+
+      if(!file){
+        return;
+      }
+
+      const reader =
+        new FileReader();
+
+      reader.onload =
+        () => {
+
+          try{
+
+            const parsed =
+              JSON.parse(
+                reader.result
+              );
+
+            if(
+              !parsed ||
+              !Array.isArray(
+                parsed.wagons
+              )
+            ){
+
+              throw new Error(
+                'bad file'
+              );
+
+            }
+
+            state = {
+
+              wagons:
+                parsed.wagons ||
+                [],
+
+              catalog:
+                parsed.catalog ||
+                [],
+
+              items:
+                parsed.items ||
+                [],
+
+              receipts:
+                parsed.receipts ||
+                [],
+
+              transfers:
+                parsed.transfers ||
+                [],
+
+              currentWagonId:
+                parsed.currentWagonId ||
+                null
+
+            };
+
+            wagons =
+              state.wagons;
+
+            catalog =
+              state.catalog;
+
+            allItems =
+              state.items;
+
+            allReceipts =
+              state.receipts;
+
+            allTransfers =
+              state.transfers;
+
+            currentWagonId =
+              state.currentWagonId;
+
+            saveState();
+
+            closeSidebar();
+
+            mainView =
+              'wagon';
+
+            renderMain();
+
+            setStatus(
+              'Данные загружены из файла.'
+            );
+
+          }catch(e){
+
+            setStatus(
+              'Не удалось прочитать файл резервной копии.'
+            );
+
+          }
+
+        };
+
+      reader.readAsText(file);
+
+      document
+        .getElementById(
+          'importFile'
+        )
+        .value = '';
+
+    }
+  );
+
+/* =========================================================
+   KEYBOARD SHORTCUTS
+========================================================= */
+
+function isTypingTarget(el){
+
+  if(!el){
+    return false;
+  }
+
+  const tag =
+    el.tagName;
+
+  return (
+    tag === 'INPUT' ||
+    tag === 'TEXTAREA' ||
+    tag === 'SELECT' ||
+    el.isContentEditable
+  );
+
+}
+
+function anyModalOpen(){
+
+  return (
+    !addOverlay.hidden ||
+    !transferOverlay.hidden ||
+    !addCatalogOverlay.hidden ||
+    !helpOverlay.hidden
+  );
+
+}
+
+function closeAnyModal(){
+
+  /*
+    Сначала справка.
+  */
+
+  if(!helpOverlay.hidden){
+
+    closeHelp();
+
+    return true;
+
+  }
+
+  if(!addOverlay.hidden){
+
+    closeAddModal();
+
+    return true;
+
+  }
+
+  if(!transferOverlay.hidden){
+
+    closeTransferModal();
+
+    return true;
+
+  }
+
+  if(!addCatalogOverlay.hidden){
+
+    addCatalogOverlay.hidden =
+      true;
+
+    return true;
+
+  }
+
+  return false;
+
+}
+
+/*
+  Ctrl + Enter.
+
+  В модальном окне:
+  подтвердить действие.
+
+  В справке:
+  закрыть справку.
+*/
+
+function openCurrentMainAction(){
+
+  /* ---------- Help ---------- */
+
+  if(!helpOverlay.hidden){
+
+    closeHelp();
+
+    return;
+
+  }
+
+  /* ---------- Add item ---------- */
+
+  if(!addOverlay.hidden){
+
+    if(
+      !issueSubmitBtn.hidden &&
+      !issueSubmitBtn.disabled
+    ){
+
+      addForm.requestSubmit();
+
+    }
+
+    return;
+
+  }
+
+  /* ---------- Transfer ---------- */
+
+  if(!transferOverlay.hidden){
+
+    transferForm.requestSubmit();
+
+    return;
+
+  }
+
+  /* ---------- Catalog ---------- */
+
+  if(!addCatalogOverlay.hidden){
+
+    addCatalogForm.requestSubmit();
+
+    return;
+
+  }
+
+  /* ---------- Main screens ---------- */
+
+  switch(mainView){
+
+    case 'wagon':
+
+      if(currentWagonId){
+
+        openAddModal(
+          currentWagonId
+        );
+
+      }
+
+      break;
+
+    case 'receipts':{
+
+      const amount =
+        document.getElementById(
+          'receiptAmount'
+        );
+
+      amount.focus();
+
+      amount.select();
+
+      break;
+
+    }
+
+    case 'catalog':
+
+      openCatalogModal();
+
+      break;
+
+    case 'transfers':
+
+      openTransferModal();
+
+      break;
+
+    case 'summary':
+
+      /*
+        На странице итогов
+        отдельного основного действия нет.
+      */
+
+      break;
+
+  }
+
+}
+
+/* =========================================================
+   GLOBAL KEYDOWN
+========================================================= */
+
+document.addEventListener(
+  'keydown',
+  e => {
+
+    /* =====================================================
+       ESC — всегда закрывает верхний уровень
+    ===================================================== */
+
+    if(e.key === 'Escape'){
+
+      if(closeAnyModal()){
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        return;
+
+      }
+
+      if(!sidebarOverlay.hidden){
+
+        closeSidebar();
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        return;
+
+      }
+
+      /*
+        Если открыт поиск —
+        Esc очищает и убирает поиск.
+      */
+
+      if(
+        mainView === 'wagon' &&
+        document.activeElement ===
+          searchInput &&
+        searchQuery
+      ){
+
+        closeSearch();
+
+        e.preventDefault();
+
+        return;
+
+      }
+
+      return;
+
+    }
+
+    /* =====================================================
+       CTRL + ENTER
+    ===================================================== */
+
+    if(
+      e.ctrlKey &&
+      !e.altKey &&
+      !e.shiftKey &&
+      e.key === 'Enter'
+    ){
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      openCurrentMainAction();
+
+      return;
+
+    }
+
+    /* =====================================================
+       CTRL + K — поиск
+    ===================================================== */
+
+    if(
+      e.ctrlKey &&
+      !e.altKey &&
+      !e.shiftKey &&
+      e.key.toLowerCase() === 'k'
+    ){
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      if(anyModalOpen()){
+        return;
+      }
+
+      if(mainView === 'wagon'){
+
+        focusSearch();
+
+      }else{
+
+        /*
+          Поиск товара существует
+          только на экране вагонов.
+
+          Поэтому Ctrl+K автоматически
+          переводит пользователя туда.
+        */
+
+        if(wagons.length){
+
+          currentWagonId =
+            currentWagonId ||
+            wagons[0].id;
+
+          state.currentWagonId =
+            currentWagonId;
+
+          mainView =
+            'wagon';
+
+          saveState();
+
+          renderMain();
+
+          setTimeout(
+            focusSearch,
+            30
+          );
+
+        }
+
+      }
+
+      return;
+
+    }
+
+    /* =====================================================
+       CTRL + F
+
+       Дополнительно поддерживаем привычный
+       ПК-шный вариант поиска товара.
+    ===================================================== */
+
+    if(
+      e.ctrlKey &&
+      !e.altKey &&
+      !e.shiftKey &&
+      e.key.toLowerCase() === 'f'
+    ){
+
+      if(
+        !anyModalOpen() &&
+        mainView === 'wagon'
+      ){
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        focusSearch();
+
+        return;
+
+      }
+
+    }
+
+    /* =====================================================
+       Если модальное окно открыто,
+       остальные глобальные горячие клавиши
+       не должны менять экран.
+    ===================================================== */
+
+    if(anyModalOpen()){
+
+      return;
+
+    }
+
+    /* =====================================================
+       ALT + 1..5
+    ===================================================== */
+
+    if(
+      e.altKey &&
+      !e.ctrlKey &&
+      !e.shiftKey
+    ){
+
+      switch(e.key){
+
+        case '1':
+
+          e.preventDefault();
+
+          currentWagonId =
+            currentWagonId ||
+            (
+              wagons.length
+                ? wagons[0].id
+                : null
+            );
+
+          state.currentWagonId =
+            currentWagonId;
+
+          mainView =
+            'wagon';
+
+          closeSidebar();
+
+          renderMain();
+
+          return;
+
+        case '2':
+
+          e.preventDefault();
+
+          mainView =
+            'receipts';
+
+          closeSidebar();
+
+          renderMain();
+
+          return;
+
+        case '3':
+
+          e.preventDefault();
+
+          mainView =
+            'summary';
+
+          closeSidebar();
+
+          renderMain();
+
+          return;
+
+        case '4':
+
+          e.preventDefault();
+
+          mainView =
+            'catalog';
+
+          closeSidebar();
+
+          renderMain();
+
+          return;
+
+        case '5':
+
+          e.preventDefault();
+
+          mainView =
+            'transfers';
+
+          closeSidebar();
+
+          renderMain();
+
+          return;
+
+      }
+
+    }
+
+    /* =====================================================
+       Не мешаем вводу текста
+    ===================================================== */
+
+    if(isTypingTarget(e.target)){
+
+      return;
+
+    }
+
+    /* =====================================================
+       /
+       Быстрый поиск
+    ===================================================== */
+
+    if(e.key === '/'){
+
+      if(mainView === 'wagon'){
+
+        e.preventDefault();
+
+        focusSearch();
+
+      }
+
+      return;
+
+    }
+
+    /* =====================================================
+       ?
+       Справка
+    ===================================================== */
+
+    if(e.key === '?'){
+
+      e.preventDefault();
+
+      openHelp();
+
+      return;
+
+    }
+
+    /* =====================================================
+       M — меню
+    ===================================================== */
+
+    if(
+      e.key.toLowerCase() === 'm'
+    ){
+
+      e.preventDefault();
+
+      if(!sidebarOverlay.hidden){
+
+        closeSidebar();
+
+      }else{
+
+        openSidebar();
+
+      }
+
+      return;
+
+    }
+
+    /* =====================================================
+       N — новое добавление вагона
+    ===================================================== */
+
+    if(
+      e.key.toLowerCase() === 'n'
+    ){
+
+      e.preventDefault();
+
+      if(!sidebarOverlay.hidden){
+
+        newWagonName.focus();
+
+        newWagonName.select();
+
+      }else{
+
+        openSidebar();
+
+        setTimeout(
+          () => {
+
+            newWagonName.focus();
+
+            newWagonName.select();
+
+          },
+          50
+        );
+
+      }
+
+      return;
+
+    }
+
+  }
+);
+
+/* =========================================================
+   INITIAL RENDER
+========================================================= */
+
+renderMain();
+
+/* =========================================================
+   SERVICE WORKER
+========================================================= */
+
+if('serviceWorker' in navigator){
+
+  window.addEventListener(
+    'load',
+    () => {
+
+      navigator.serviceWorker
+        .register('sw.js')
+        .catch(() => {});
+
+    }
+  );
+
+}
+</script>
+
+</body>
+</html>
