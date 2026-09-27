@@ -1060,6 +1060,58 @@
     font:inherit;
   }
 
+
+  /* ---------- Notes ---------- */
+  .notes-layout{display:grid;grid-template-columns:280px 1fr;gap:12px;height:calc(100vh - 105px);min-height:500px;}
+  .notes-list{border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:auto;padding:8px;}
+  .note-list-row{display:flex;gap:5px;margin-bottom:5px;}
+  .note-list-btn{flex:1;text-align:left;background:transparent;border:1px solid transparent;color:var(--ink);border-radius:7px;padding:9px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .note-list-btn.active{background:var(--surface-2);border-color:var(--amber-dim);color:var(--amber);}
+  .note-delete{background:transparent;border:1px solid var(--line);color:var(--ink-muted);border-radius:6px;cursor:pointer;padding:5px 7px;}
+  .note-delete:hover{color:var(--brick);border-color:var(--brick-dim);}
+  .notes-editor{display:flex;flex-direction:column;gap:8px;min-width:0;}
+  .notes-editor input,.notes-editor textarea{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:9px;color:var(--ink);padding:10px;font:inherit;}
+  .notes-editor input{font-size:16px;font-weight:600;}
+  .notes-editor textarea{flex:1;min-height:360px;resize:none;line-height:1.5;}
+  .notes-actions{display:flex;gap:8px;flex-wrap:wrap;}
+  .notes-actions button,.schedule-actions button{background:var(--surface);border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:8px 11px;cursor:pointer;}
+  .notes-actions button.primary,.schedule-actions button.primary{background:var(--amber);color:#1A1400;border-color:var(--amber);font-weight:600;}
+
+  /* ---------- Schedule ---------- */
+  .schedule-search{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:12px;}
+  .schedule-fields{display:grid;grid-template-columns:1fr 1fr 170px;gap:8px;}
+  .schedule-fields input{width:100%;background:var(--surface-2);border:1px solid var(--line);border-radius:7px;color:var(--ink);padding:9px 10px;font:inherit;}
+  .schedule-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+  .schedule-help{font-size:11px;color:var(--ink-muted);line-height:1.45;margin-top:8px;}
+  .schedule-current{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px;}
+  .schedule-current h3{margin:0 0 4px;font-size:18px;}
+  .schedule-route{color:var(--ink-muted);font-size:13px;margin-bottom:12px;}
+  .schedule-timers{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  .schedule-timer{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:10px;text-align:center;}
+  .schedule-timer span{display:block;color:var(--ink-muted);font-size:10px;margin-bottom:4px;text-transform:uppercase;}
+  .schedule-timer b{font-family:ui-monospace,monospace;font-size:20px;}
+  .schedule-stops{border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:auto;}
+  .schedule-stop{display:grid;grid-template-columns:1fr 85px 85px 100px;gap:8px;padding:9px 11px;border-bottom:1px solid var(--line);align-items:center;font-size:12px;}
+  .schedule-stop:last-child{border-bottom:0;}
+  .schedule-stop.current{background:var(--surface-2);color:var(--amber);}
+  .schedule-stop-head{color:var(--ink-muted);font-size:10px;text-transform:uppercase;}
+  .schedule-saved{display:flex;flex-direction:column;gap:7px;margin-bottom:12px;}
+  .schedule-card{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:10px;}
+  .schedule-card-main{flex:1;min-width:0;cursor:pointer;}
+  .schedule-card-title{font-weight:600;}
+  .schedule-card-route{font-size:11px;color:var(--ink-muted);margin-top:2px;}
+  .schedule-card button{background:transparent;border:1px solid var(--line);color:var(--ink-muted);border-radius:6px;padding:5px 7px;cursor:pointer;}
+  .schedule-card button:hover{color:var(--brick);border-color:var(--brick-dim);}
+  .schedule-link{word-break:break-all;}
+  @media(max-width:760px){
+    .notes-layout{grid-template-columns:1fr;height:auto;min-height:0;}
+    .notes-list{max-height:190px;}
+    .notes-editor textarea{min-height:300px;}
+    .schedule-fields{grid-template-columns:1fr;}
+    .schedule-timers{grid-template-columns:1fr;}
+    .schedule-stop{grid-template-columns:1fr 65px 65px 80px;}
+  }
+
   /* ---------- Modals ---------- */
 
   .modal-overlay{
@@ -1457,6 +1509,60 @@
   </div>
 </div>
 
+
+<!-- ================= NOTES ================= -->
+<div id="notesView" class="page-view" hidden>
+  <div class="page-title">Заметки</div>
+  <div class="notes-layout">
+    <div class="notes-list">
+      <div class="notes-actions" style="margin-bottom:8px;">
+        <button id="addNoteBtn" class="primary">+ Новая заметка</button>
+      </div>
+      <div id="notesList"></div>
+    </div>
+    <div class="notes-editor">
+      <input id="noteTitle" placeholder="Название заметки" maxlength="120">
+      <textarea id="noteText" placeholder="Текст заметки..."></textarea>
+      <div class="notes-actions">
+        <button id="saveNoteBtn" class="primary">Сохранить</button>
+        <button id="deleteCurrentNoteBtn">Удалить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= SCHEDULE ================= -->
+<div id="scheduleView" class="page-view" hidden>
+  <div class="page-title">Расписание</div>
+
+  <div class="schedule-search">
+    <div class="schedule-fields">
+      <input id="scheduleFrom" list="scheduleCities" placeholder="Откуда">
+      <input id="scheduleTo" list="scheduleCities" placeholder="Куда">
+      <input id="scheduleDate" type="date">
+    </div>
+    <datalist id="scheduleCities"></datalist>
+    <div class="schedule-actions">
+      <button id="openYandexScheduleBtn" class="primary">Открыть поиск Яндекс</button>
+      <button id="parseYandexLinkBtn">Разобрать ссылку Яндекс</button>
+    </div>
+    <input id="yandexScheduleLink" class="schedule-link" placeholder="Вставьте ссылку поиска или выбранного поезда Яндекс Расписаний">
+    <div class="schedule-help">
+      После выбора поезда в Яндексе скопируйте ссылку на поезд и вставьте её сюда.
+      Приложение сохранит номер, направление, дату и время. Сохранённые данные доступны без интернета.
+    </div>
+  </div>
+
+  <div id="scheduleCurrent" class="schedule-current" hidden></div>
+
+  <div class="schedule-saved">
+    <div class="sidebar-section-title">Сохранённые поездки</div>
+    <div id="scheduleSavedList"></div>
+  </div>
+
+  <div id="scheduleStops" class="schedule-stops" hidden></div>
+</div>
+
 <!-- ================= TRANSFERS ================= -->
 
 <div id="transfersView" class="page-view" hidden>
@@ -1514,6 +1620,14 @@
 
     <button class="sidebar-nav-item" id="navAgentReport">
       📊 Отчёт агента
+    </button>
+
+    <button class="sidebar-nav-item" id="navNotes">
+      📝 Заметки
+    </button>
+
+    <button class="sidebar-nav-item" id="navSchedule">
+      🚆 Расписание
     </button>
 
     <button class="sidebar-nav-item" id="navReceipts">
@@ -2052,6 +2166,8 @@ function loadState(){
       if(!Array.isArray(parsed.agentReportRows)) parsed.agentReportRows = [];
       if(!Array.isArray(parsed.agentReportCategories)) parsed.agentReportCategories = [];
       if(!parsed.agentReport) parsed.agentReport = {title:'Отчёт агента', date:''};
+      if(!Array.isArray(parsed.notes)) parsed.notes = [];
+      if(!Array.isArray(parsed.schedules)) parsed.schedules = [];
 
       return parsed;
     }
@@ -2070,6 +2186,8 @@ function loadState(){
     },
     agentReportRows:[],
     agentReportCategories:[],
+    notes:[],
+    schedules:[],
     currentWagonId:null
   };
 }
@@ -2097,6 +2215,10 @@ let agentReportRows = state.agentReportRows || [];
 let agentReportCategories = Array.isArray(state.agentReportCategories)
   ? state.agentReportCategories
   : [];
+let notes = Array.isArray(state.notes) ? state.notes : [];
+let schedules = Array.isArray(state.schedules) ? state.schedules : [];
+let currentNoteId = null;
+let currentScheduleId = null;
 
 let currentWagonId = state.currentWagonId;
 
@@ -2674,6 +2796,19 @@ document
     }
   );
 
+
+document.getElementById('navNotes').addEventListener('click',()=>{
+  mainView='notes';
+  closeSidebar();
+  renderMain();
+});
+
+document.getElementById('navSchedule').addEventListener('click',()=>{
+  mainView='schedule';
+  closeSidebar();
+  renderMain();
+});
+
 /* =========================================================
    MAIN ROUTER
 ========================================================= */
@@ -2689,6 +2824,8 @@ function renderMain(){
   catalogView.hidden = true;
   transfersView.hidden = true;
   agentReportView.hidden = true;
+  notesView.hidden = true;
+  scheduleView.hidden = true;
 
   titleInput.hidden = true;
   staticTitle.hidden = true;
@@ -2909,6 +3046,22 @@ function renderMain(){
     agentReportDate.value = agentReport.date || '';
 
     renderAgentReportView();
+
+  }
+
+  }else if(mainView === 'notes'){
+
+    staticTitle.hidden=false;
+    staticTitle.textContent='Заметки';
+    notesView.hidden=false;
+    renderNotesView();
+
+  }else if(mainView === 'schedule'){
+
+    staticTitle.hidden=false;
+    staticTitle.textContent='Расписание';
+    scheduleView.hidden=false;
+    renderScheduleView();
 
   }
 
@@ -5939,6 +6092,415 @@ document.getElementById('agentReportNumbersBtn').addEventListener('click', downl
 document.getElementById('agentReportGoogleBtn').addEventListener('click', downloadAgentReportCsv);
 
 
+
+/* =========================================================
+   NOTES
+========================================================= */
+
+function saveNotes(){
+  state.notes=notes;
+  saveState();
+}
+
+function renderNotesView(){
+  if(!notes.length){
+    notesListEl.innerHTML='<div class="modal-hint" style="padding:10px;">Заметок пока нет.</div>';
+    noteTitle.value='';
+    noteText.value='';
+    currentNoteId=null;
+    return;
+  }
+
+  if(!currentNoteId || !notes.some(n=>n.id===currentNoteId)){
+    currentNoteId=notes[0].id;
+  }
+
+  notesListEl.innerHTML=notes.map(n=>`
+    <div class="note-list-row">
+      <button class="note-list-btn ${n.id===currentNoteId?'active':''}" data-note-id="${escapeAttr(n.id)}">
+        ${escapeHtml(n.title||'Без названия')}
+      </button>
+      <button class="note-delete" data-note-delete="${escapeAttr(n.id)}" title="Удалить">✕</button>
+    </div>
+  `).join('');
+
+  const current=notes.find(n=>n.id===currentNoteId);
+  noteTitle.value=current?.title||'';
+  noteText.value=current?.text||'';
+
+  notesListEl.querySelectorAll('[data-note-id]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      currentNoteId=btn.dataset.noteId;
+      renderNotesView();
+    });
+  });
+
+  notesListEl.querySelectorAll('[data-note-delete]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const n=notes.find(x=>x.id===btn.dataset.noteDelete);
+      if(!n)return;
+      if(!confirm('Удалить заметку «'+(n.title||'Без названия')+'»?'))return;
+      notes=notes.filter(x=>x.id!==n.id);
+      if(currentNoteId===n.id)currentNoteId=notes[0]?.id||null;
+      saveNotes();
+      renderNotesView();
+    });
+  });
+}
+
+function addNote(){
+  const n={id:uid(),title:'Новая заметка',text:'',updatedAt:Date.now()};
+  notes.unshift(n);
+  currentNoteId=n.id;
+  saveNotes();
+  renderNotesView();
+  noteTitle.focus();
+  noteTitle.select();
+}
+
+document.getElementById('addNoteBtn').addEventListener('click',addNote);
+document.getElementById('saveNoteBtn').addEventListener('click',()=>{
+  const n=notes.find(x=>x.id===currentNoteId);
+  if(!n)return;
+  n.title=noteTitle.value.trim()||'Без названия';
+  n.text=noteText.value;
+  n.updatedAt=Date.now();
+  saveNotes();
+  renderNotesView();
+  showToast('Заметка сохранена');
+});
+document.getElementById('deleteCurrentNoteBtn').addEventListener('click',()=>{
+  if(!currentNoteId)return;
+  const n=notes.find(x=>x.id===currentNoteId);
+  if(n && confirm('Удалить текущую заметку?')){
+    notes=notes.filter(x=>x.id!==currentNoteId);
+    currentNoteId=notes[0]?.id||null;
+    saveNotes();
+    renderNotesView();
+  }
+});
+
+/* =========================================================
+   SCHEDULE / YANDEX
+========================================================= */
+
+const scheduleCities=[
+  ['Нижний Новгород','c23243'],
+  ['Новороссийск','c970'],
+  ['Москва','c213'],
+  ['Санкт-Петербург','c2'],
+  ['Казань','c43'],
+  ['Владимир','c192'],
+  ['Ростов-на-Дону','c39'],
+  ['Краснодар','c35'],
+  ['Сочи','c239'],
+  ['Екатеринбург','c54'],
+  ['Самара','c51'],
+  ['Саратов','c194'],
+  ['Волгоград','c38'],
+  ['Воронеж','c193'],
+  ['Рязань','c11'],
+  ['Тула','c15'],
+  ['Ярославль','c16'],
+  ['Калуга','c6'],
+  ['Архангельск','c20'],
+  ['Мурманск','c23'],
+  ['Пермь','c111'],
+  ['Уфа','c172'],
+  ['Омск','c66'],
+  ['Новосибирск','c65'],
+  ['Тюмень','c55']
+];
+
+function renderScheduleCities(){
+  const dl=document.getElementById('scheduleCities');
+  dl.innerHTML=scheduleCities.map(x=>'<option value="'+escapeAttr(x[0])+'">').join('');
+}
+
+function scheduleCityCode(name){
+  const n=String(name||'').trim().toLowerCase();
+  const exact=scheduleCities.find(x=>x[0].toLowerCase()===n);
+  if(exact)return exact[1];
+  const saved=schedules.find(x=>
+    String(x.fromName||'').toLowerCase()===n ||
+    String(x.toName||'').toLowerCase()===n
+  );
+  return saved ? (String(saved.fromName||'').toLowerCase()===n?saved.fromId:saved.toId) : '';
+}
+
+function formatDuration(ms){
+  if(!Number.isFinite(ms))return '—';
+  const sign=ms<0?'-':'';
+  let sec=Math.abs(Math.floor(ms/1000));
+  const d=Math.floor(sec/86400); sec%=86400;
+  const h=Math.floor(sec/3600); sec%=3600;
+  const m=Math.floor(sec/60);
+  const ss=sec%60;
+  if(d)return sign+d+'д '+String(h).padStart(2,'0')+'ч';
+  return sign+String(h).padStart(2,'0')+'ч '+String(m).padStart(2,'0')+'м '+String(ss).padStart(2,'0')+'с';
+}
+
+function parseYandexUrl(raw){
+  try{
+    const u=new URL(raw.trim());
+    if(!/yandex\\.(ru|com)/i.test(u.hostname) || !/rasp/i.test(u.hostname+u.pathname)) return null;
+    const q=u.searchParams;
+    const out={
+      sourceUrl:u.href,
+      uid:'',
+      fromId:q.get('fromId')||q.get('station_from')||'',
+      toId:q.get('toId')||q.get('station_to')||'',
+      fromName:q.get('fromName')||'',
+      toName:q.get('toName')||'',
+      date:'',
+      departure:'',
+      arrival:'',
+      trainNumber:'',
+      stops:[]
+    };
+
+    const when=q.get('when')||'';
+    if(when){
+      const dm=when.match(/(\\d{1,2})\\s+([^,\\d]+?)(?:\\s+(\\d{4}))?$/i);
+      if(dm){
+        const months={
+          'января':0,'февраля':1,'марта':2,'апреля':3,'мая':4,'июня':5,
+          'июля':6,'августа':7,'сентября':8,'октября':9,'ноября':10,'декабря':11
+        };
+        const month=months[String(dm[2]).trim().toLowerCase()];
+        if(month!==undefined){
+          const year=Number(dm[3])||new Date().getFullYear();
+          out.date=new Date(year,month,Number(dm[1])).toISOString().slice(0,10);
+        }
+      }
+    }
+
+    const dep=q.get('departure_from');
+    if(dep){
+      out.departure=decodeURIComponent(dep).replace(' ','T').replace(' ','T');
+      if(!out.date && /^\\d{4}-\\d{2}-\\d{2}/.test(out.departure))out.date=out.departure.slice(0,10);
+    }
+
+    const m=u.pathname.match(/\\/thread\\/([^/]+)/i);
+    if(m){
+      out.uid=decodeURIComponent(m[1]);
+      const part=out.uid.match(/^R_(.+?)_/i);
+      if(part)out.trainNumber=part[1];
+    }
+
+    if(out.fromId && /^\\d+$/.test(out.fromId))out.fromId='s'+out.fromId;
+    if(out.toId && /^\\d+$/.test(out.toId))out.toId='s'+out.toId;
+
+    if(!out.fromName && out.fromId==='s9612089')out.fromName='Нижний Новгород';
+    if(!out.toName && out.toId==='s9613022')out.toName='Новороссийск';
+
+    return out;
+  }catch(e){return null;}
+}
+
+function buildYandexSearchUrl(){
+  const from=scheduleFrom.value.trim();
+  const to=scheduleTo.value.trim();
+  const date=scheduleDate.value;
+  const fromId=scheduleCityCode(from)||'';
+  const toId=scheduleCityCode(to)||'';
+
+  const p=new URLSearchParams();
+  if(fromId)p.set('fromId',fromId);
+  if(from)p.set('fromName',from);
+  if(toId)p.set('toId',toId);
+  if(to)p.set('toName',to);
+  if(date){
+    const d=new Date(date+'T00:00:00');
+    const months=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+    p.set('when',d.getDate()+' '+months[d.getMonth()]);
+  }
+  return 'https://rasp.yandex.ru/search/train/?'+p.toString();
+}
+
+function saveSchedule(item){
+  const normalized={
+    id:item.id||uid(),
+    uid:item.uid||'',
+    trainNumber:item.trainNumber||'',
+    fromId:item.fromId||'',
+    toId:item.toId||'',
+    fromName:item.fromName||'',
+    toName:item.toName||'',
+    date:item.date||'',
+    departure:item.departure||'',
+    arrival:item.arrival||'',
+    stops:Array.isArray(item.stops)?item.stops:[],
+    sourceUrl:item.sourceUrl||'',
+    updatedAt:Date.now()
+  };
+  const idx=schedules.findIndex(x=>x.id===normalized.id);
+  if(idx>=0)schedules[idx]=normalized;else schedules.unshift(normalized);
+  currentScheduleId=normalized.id;
+  state.schedules=schedules;
+  saveState();
+  return normalized;
+}
+
+function renderScheduleView(){
+  renderScheduleCities();
+  if(!scheduleDate.value)scheduleDate.value=new Date().toISOString().slice(0,10);
+  renderSavedSchedules();
+  renderCurrentSchedule();
+}
+
+function renderSavedSchedules(){
+  if(!schedules.length){
+    scheduleSavedList.innerHTML='<div class="modal-hint">Сохранённых поездов пока нет.</div>';
+    return;
+  }
+  scheduleSavedList.innerHTML=schedules.map(x=>`
+    <div class="schedule-card">
+      <div class="schedule-card-main" data-schedule-open="${escapeAttr(x.id)}">
+        <div class="schedule-card-title">${escapeHtml(x.trainNumber?'Поезд '+x.trainNumber:'Поезд')}</div>
+        <div class="schedule-card-route">${escapeHtml(x.fromName||'—')} → ${escapeHtml(x.toName||'—')} · ${escapeHtml(x.date||'')}</div>
+      </div>
+      <button data-schedule-delete="${escapeAttr(x.id)}">✕</button>
+    </div>
+  `).join('');
+  scheduleSavedList.querySelectorAll('[data-schedule-open]').forEach(el=>{
+    el.addEventListener('click',()=>{
+      currentScheduleId=el.dataset.scheduleOpen;
+      renderScheduleView();
+    });
+  });
+  scheduleSavedList.querySelectorAll('[data-schedule-delete]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      if(!confirm('Удалить сохранённый поезд?'))return;
+      schedules=schedules.filter(x=>x.id!==btn.dataset.scheduleDelete);
+      if(currentScheduleId===btn.dataset.scheduleDelete)currentScheduleId=schedules[0]?.id||null;
+      state.schedules=schedules;saveState();renderScheduleView();
+    });
+  });
+}
+
+function scheduleStopDate(stop,baseDate){
+  if(!stop.time)return null;
+  const d=new Date((baseDate||'1970-01-01')+'T'+stop.time+':00');
+  return Number.isNaN(d.getTime())?null:d;
+}
+
+function renderCurrentSchedule(){
+  const x=schedules.find(s=>s.id===currentScheduleId)||schedules[0];
+  if(!x){
+    scheduleCurrent.hidden=true;
+    scheduleStops.hidden=true;
+    return;
+  }
+  currentScheduleId=x.id;
+  scheduleCurrent.hidden=false;
+
+  scheduleCurrent.innerHTML=`
+    <h3>${escapeHtml(x.trainNumber?'Поезд '+x.trainNumber:'Сохранённый поезд')}</h3>
+    <div class="schedule-route">${escapeHtml(x.fromName||'—')} → ${escapeHtml(x.toName||'—')} · ${escapeHtml(x.date||'')}</div>
+    <div class="schedule-timers">
+      <div class="schedule-timer"><span>До отправления</span><b id="scheduleDepartureTimer">—</b></div>
+      <div class="schedule-timer"><span>До прибытия</span><b id="scheduleArrivalTimer">—</b></div>
+      <div class="schedule-timer"><span>Статус</span><b id="scheduleStatus">—</b></div>
+    </div>
+    <div class="schedule-actions">
+      <button id="scheduleEditRouteBtn">Добавить/изменить остановки</button>
+      <button id="scheduleOpenSourceBtn">Открыть Яндекс</button>
+    </div>
+  `;
+
+  document.getElementById('scheduleOpenSourceBtn').addEventListener('click',()=>{
+    if(x.sourceUrl)window.open(x.sourceUrl,'_blank');
+  });
+  document.getElementById('scheduleEditRouteBtn').addEventListener('click',()=>{
+    const route=x.stops?.length?x.stops:[];
+    const text=prompt(
+      'Остановки по одной строке в формате:\\nНазвание | прибытие | отправление\\n\\nНапример:\\nАрзамас | 17:20 | 17:23',
+      route.map(s=>(s.name||'')+' | '+(s.arrival||'')+' | '+(s.departure||'')).join('\\n')
+    );
+    if(text===null)return;
+    x.stops=text.split(/\\n+/).map(line=>{
+      const a=line.split('|').map(v=>v.trim());
+      return {name:a[0]||'',arrival:a[1]||'',departure:a[2]||''};
+    }).filter(v=>v.name);
+    state.schedules=schedules;saveState();renderScheduleView();
+  });
+
+  const dep=x.departure?new Date(x.departure.replace(' ','T')):null;
+  const arr=x.arrival?new Date(x.arrival.replace(' ','T')):null;
+  const now=new Date();
+  const depEl=document.getElementById('scheduleDepartureTimer');
+  const arrEl=document.getElementById('scheduleArrivalTimer');
+  const statusEl=document.getElementById('scheduleStatus');
+
+  const update=()=>{
+    const now2=new Date();
+    depEl.textContent=dep?formatDuration(dep-now2):'—';
+    arrEl.textContent=arr?formatDuration(arr-now2):'—';
+    if(dep && now2<dep)statusEl.textContent='Ожидание';
+    else if(arr && now2<arr)statusEl.textContent='В пути';
+    else if(arr && now2>=arr)statusEl.textContent='Прибыл';
+    else statusEl.textContent='—';
+
+    if(x.stops?.length){
+      const base=x.date||new Date().toISOString().slice(0,10);
+      let current=-1;
+      x.stops.forEach((st,i)=>{
+        const d=st.arrival?scheduleStopDate(st,base):null;
+        const dd=st.departure?scheduleStopDate({time:st.departure},base):null;
+        if(d && now2>=d)current=i;
+        if(dd && now2>=dd)current=i;
+      });
+      scheduleStops.querySelectorAll('[data-stop-index]').forEach(el=>{
+        el.classList.toggle('current',Number(el.dataset.stopIndex)===current);
+      });
+    }
+  };
+  update();
+  clearInterval(window.__scheduleTimer);
+  window.__scheduleTimer=setInterval(update,1000);
+
+  if(x.stops?.length){
+    scheduleStops.hidden=false;
+    scheduleStops.innerHTML=
+      '<div class="schedule-stop schedule-stop-head"><div>Остановка</div><div>Прибытие</div><div>Отправление</div><div>Стоянка</div></div>'+
+      x.stops.map((st,i)=>{
+        const a=st.arrival?new Date(baseDateTime(x.date,st.arrival)):null;
+        const d=st.departure?new Date(baseDateTime(x.date,st.departure)):null;
+        const stand=a&&d?formatDuration(d-a):'—';
+        return '<div class="schedule-stop" data-stop-index="'+i+'"><div>'+escapeHtml(st.name)+'</div><div class="mono">'+escapeHtml(st.arrival||'—')+'</div><div class="mono">'+escapeHtml(st.departure||'—')+'</div><div class="mono">'+stand+'</div></div>';
+      }).join('');
+  }else{
+    scheduleStops.hidden=true;
+  }
+}
+
+function baseDateTime(date,time){
+  const d=date||new Date().toISOString().slice(0,10);
+  return d+'T'+time+':00';
+}
+
+function parseYandexAndSave(){
+  const parsed=parseYandexUrl(yandexScheduleLink.value);
+  if(!parsed){
+    showToast('Не удалось распознать ссылку Яндекс');
+    return;
+  }
+  const saved=saveSchedule(parsed);
+  scheduleFrom.value=saved.fromName||scheduleFrom.value;
+  scheduleTo.value=saved.toName||scheduleTo.value;
+  scheduleDate.value=saved.date||scheduleDate.value;
+  yandexScheduleLink.value=saved.sourceUrl||yandexScheduleLink.value;
+  renderScheduleView();
+  showToast('Поезд сохранён. Он доступен офлайн');
+}
+
+document.getElementById('openYandexScheduleBtn').addEventListener('click',()=>{
+  window.open(buildYandexSearchUrl(),'_blank');
+});
+document.getElementById('parseYandexLinkBtn').addEventListener('click',parseYandexAndSave);
+
+
 /* =========================================================
    CATALOG MODAL
 ========================================================= */
@@ -6265,6 +6827,18 @@ document
                 parsed.agentReportRows ||
                 [],
 
+              agentReportCategories:
+                parsed.agentReportCategories ||
+                [],
+
+              notes:
+                parsed.notes ||
+                [],
+
+              schedules:
+                parsed.schedules ||
+                [],
+
               currentWagonId:
                 parsed.currentWagonId ||
                 null
@@ -6292,6 +6866,18 @@ document
 
             agentReportRows =
               state.agentReportRows ||
+              [];
+
+            agentReportCategories =
+              state.agentReportCategories ||
+              [];
+
+            notes =
+              state.notes ||
+              [];
+
+            schedules =
+              state.schedules ||
               [];
 
             currentWagonId =
@@ -6800,6 +7386,26 @@ document.addEventListener(
 
           closeSidebar();
 
+          renderMain();
+
+          return;
+
+        case '7':
+
+          e.preventDefault();
+
+          mainView='notes';
+          closeSidebar();
+          renderMain();
+
+          return;
+
+        case '8':
+
+          e.preventDefault();
+
+          mainView='schedule';
+          closeSidebar();
           renderMain();
 
           return;
