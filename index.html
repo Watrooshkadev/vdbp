@@ -1081,6 +1081,7 @@
   .schedule-search{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:12px;}
   .schedule-fields{display:grid;grid-template-columns:1fr 1fr 170px;gap:8px;}
   .schedule-fields input{width:100%;background:var(--surface-2);border:1px solid var(--line);border-radius:7px;color:var(--ink);padding:9px 10px;font:inherit;}
+  .app-version{font-size:10px;color:var(--ink-muted);font-family:ui-monospace,monospace;margin-left:8px;white-space:nowrap;}
   .schedule-stops-input{width:100%;min-height:260px;resize:vertical;background:var(--surface-2);border:1px solid var(--line);border-radius:7px;color:var(--ink);padding:10px 12px;font:13px/1.5 ui-monospace,monospace;margin-top:10px;}
   .schedule-stops-input:focus{outline:none;border-color:var(--amber-dim);}
   .schedule-parse-info{font-size:11px;color:var(--ink-muted);line-height:1.45;margin-top:6px;}
@@ -1098,6 +1099,7 @@
   .schedule-stop:last-child{border-bottom:0;}
   .schedule-stop.current{background:var(--surface-2);color:var(--amber);}
   .schedule-stop-head{color:var(--ink-muted);font-size:10px;text-transform:uppercase;}
+  .schedule-day-heading{padding:9px 11px 5px;color:var(--ink-muted);font-size:11px;font-weight:700;border-bottom:1px solid var(--line);background:var(--surface-2);}
   .schedule-saved{display:flex;flex-direction:column;gap:7px;margin-bottom:12px;}
   .schedule-card{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:10px;}
   .schedule-card-main{flex:1;min-width:0;cursor:pointer;}
@@ -1352,7 +1354,7 @@
     <small id="dateLine"></small>
   </div>
 
-  <div class="topbar-right" id="topbarRight"></div>
+  <div class="topbar-right" id="topbarRight"><span id="appVersion" class="app-version">v1.0.0</span></div>
 </div>
 
 <!-- ================= SEARCH ================= -->
@@ -1587,6 +1589,9 @@
   <div id="scheduleCurrent" class="schedule-current" hidden></div>
 
   <div class="schedule-saved">
+    <div class="schedule-actions" style="margin-bottom:8px;">
+      <button id="showScheduleSearchBtn">＋ Добавить поезд</button>
+    </div>
     <div class="sidebar-section-title">Сохранённые поездки</div>
     <div id="scheduleSavedList"></div>
   </div>
@@ -2301,6 +2306,7 @@ const summaryView = document.getElementById('summaryView');
 const catalogView = document.getElementById('catalogView');
 const transfersView = document.getElementById('transfersView');
 const agentReportView = document.getElementById('agentReportView');
+const notesView = document.getElementById('notesView');
 const agentReportBody = document.getElementById('agentReportBody');
 const agentReportFoot = document.getElementById('agentReportFoot');
 const agentReportTitle = document.getElementById('agentReportTitle');
@@ -2874,7 +2880,7 @@ function renderMain(){
   titleInput.hidden = true;
   staticTitle.hidden = true;
 
-  topbarRight.innerHTML = '';
+  topbarRight.innerHTML = '<span class="app-version">v1.0.0</span>';
 
   if(mainView === 'wagon'){
 
@@ -6313,9 +6319,18 @@ function parseCopiedYandexStops(raw){
 
   const result=[];
   let i=0;
+  let currentDay=0;
+  let currentDayLabel='';
 
   while(i<lines.length){
     const name=lines[i];
+
+    if(isScheduleDateHeading(name)){
+      currentDayLabel=name;
+      currentDay++;
+      i++;
+      continue;
+    }
 
     if(isScheduleNoise(name)){
       i++;
@@ -6330,7 +6345,9 @@ function parseCopiedYandexStops(raw){
           name:p[0],
           arrival:isScheduleTime(p[1])?p[1]:'',
           departure:isScheduleTime(p[2])?p[2]:'',
-          stopTime:p[3]||''
+          stopTime:p[3]||'',
+          dayOffset:currentDay,
+          dayLabel:currentDayLabel
         });
       }
       i++;
@@ -6383,7 +6400,7 @@ function parseCopiedYandexStops(raw){
         else arrival=following[0];
       }
 
-      result.push({name:station,arrival,departure,stopTime});
+      result.push({name:station,arrival,departure,stopTime,dayOffset:currentDay,dayLabel:currentDayLabel});
       i=j;
     }else{
       i++;
@@ -6507,8 +6524,19 @@ function renderScheduleView(){
   renderScheduleCities();
   if(!scheduleDate.value)scheduleDate.value=new Date().toISOString().slice(0,10);
   if(!scheduleTimezone.value)scheduleTimezone.value='Europe/Moscow';
-  renderSavedSchedules();
+
   const current=schedules.find(s=>s.id===currentScheduleId)||schedules[0];
+
+  // После сохранения поезд уже выбран — поля поиска скрываем,
+  // чтобы рабочий экран начинался сразу с расписания.
+  const hasSavedTrain=!!current;
+  const searchBox=document.querySelector('.schedule-search');
+  if(searchBox){
+    searchBox.hidden=hasSavedTrain;
+  }
+
+  renderSavedSchedules();
+
   if(typeof yandexStopsInput!=='undefined'){
     yandexStopsInput.value=current?.rawStopsText||'';
   }
@@ -6933,6 +6961,16 @@ document.getElementById('openYandexScheduleBtn').addEventListener('click',()=>{
   window.open(buildYandexSearchUrl(),'_blank');
 });
 document.getElementById('parseYandexLinkBtn').addEventListener('click',parseYandexAndSave);
+
+document.getElementById('showScheduleSearchBtn').addEventListener('click',()=>{
+  const box=document.querySelector('.schedule-search');
+  if(box){
+    box.hidden=false;
+    yandexScheduleLink.value='';
+    yandexStopsInput.value='';
+    yandexScheduleLink.focus();
+  }
+});
 
 
 /* =========================================================
