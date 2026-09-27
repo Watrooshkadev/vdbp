@@ -6343,13 +6343,19 @@ function parseCopiedYandexStops(raw){
   let i=0;
   let currentDay=0;
   let currentDayLabel='';
+  let sawMoscowTime=false;
 
   while(i<lines.length){
     const name=lines[i];
 
     if(isScheduleDateHeading(name)){
       currentDayLabel=name;
-      currentDay++;
+      if(result.length) currentDay++;
+      i++;
+      continue;
+    }
+    if(/^московское время$/i.test(name)){
+      sawMoscowTime=true;
       i++;
       continue;
     }
@@ -6429,6 +6435,7 @@ function parseCopiedYandexStops(raw){
     }
   }
 
+  result.timezoneLabel=sawMoscowTime?'Московское время':'Время из скопированного расписания';
   return result;
 }
 
