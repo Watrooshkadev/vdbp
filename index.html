@@ -1427,7 +1427,7 @@
     <small id="dateLine"></small>
   </div>
 
-  <div class="topbar-right" id="topbarRight"><span id="appVersion" class="app-version">v1.1.2</span></div>
+  <div class="topbar-right" id="topbarRight"><span id="appVersion" class="app-version">v1.1.3</span></div>
 </div>
 
 <!-- ================= SEARCH ================= -->
@@ -2829,24 +2829,19 @@ async function forceAppUpdate(){
     if('serviceWorker' in navigator){
       const registrations=await navigator.serviceWorker.getRegistrations();
 
-      // Просим браузер получить свежий sw.js.
+      // Сначала запрашиваем свежий Service Worker.
       await Promise.all(
         registrations.map(r=>r.update().catch(()=>{}))
       );
 
-      // Если новая версия уже установилась — активируем её.
+      // Отключаем старые Service Worker. Данные приложения
+      // (localStorage / IndexedDB) при этом не удаляются.
       await Promise.all(
-        registrations.map(r=>{
-          if(r.waiting){
-            r.waiting.postMessage({type:'SKIP_WAITING'});
-          }
-          return Promise.resolve();
-        })
+        registrations.map(r=>r.unregister().catch(()=>false))
       );
     }
 
     // Удаляем только Cache Storage.
-    // localStorage / IndexedDB / данные приложения НЕ трогаем.
     if('caches' in window){
       const keys=await caches.keys();
       await Promise.all(
@@ -2854,13 +2849,16 @@ async function forceAppUpdate(){
       );
     }
 
-    // cache-busting URL заставляет браузер получить новый документ.
+    // Одноразовый query-параметр исключает старый HTTP-кэш.
     window.location.replace(
       window.location.pathname+
       '?app-update='+Date.now()
     );
   }catch(e){
-    window.location.reload();
+    window.location.replace(
+      window.location.pathname+
+      '?app-update='+Date.now()
+    );
   }
 }
 
