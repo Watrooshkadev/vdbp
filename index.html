@@ -1135,27 +1135,29 @@
   .schedule-parse-info{font-size:11px;color:var(--ink-muted);line-height:1.45;margin-top:6px;}
   .schedule-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
   .schedule-help{font-size:11px;color:var(--ink-muted);line-height:1.45;margin-top:8px;}
-  .schedule-current{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px;}
-  .schedule-current h3{margin:0 0 4px;font-size:18px;}
-  .schedule-route{color:var(--ink-muted);font-size:13px;margin-bottom:12px;}
-  .schedule-timers{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
-  .schedule-timer{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:10px;text-align:center;}
-  .schedule-timer span{display:block;color:var(--ink-muted);font-size:10px;margin-bottom:4px;text-transform:uppercase;}
-  .schedule-timer b{font-family:ui-monospace,monospace;font-size:20px;}
+  .schedule-current{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:10px;}
+  .schedule-current h3{margin:0 0 3px;font-size:16px;}
+  .schedule-route{color:var(--ink-muted);font-size:12px;margin-bottom:8px;}
+  .schedule-timers{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;}
+  .schedule-timer{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px;text-align:center;}
+  .schedule-timer span{display:block;color:var(--ink-muted);font-size:10px;margin-bottom:3px;text-transform:uppercase;}
+  .schedule-timer b{font-family:ui-monospace,monospace;font-size:18px;}
   .schedule-stops{border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:auto;}
   .schedule-stop{display:grid;grid-template-columns:1fr 85px 85px 100px;gap:8px;padding:9px 11px;border-bottom:1px solid var(--line);align-items:center;font-size:12px;}
   .schedule-stop:last-child{border-bottom:0;}
   .schedule-stop.current{background:var(--surface-2);color:var(--amber);}
-  .schedule-timezone{font-size:12px;font-weight:600;color:var(--amber);margin:4px 0 12px;}
+  .schedule-timezone{font-size:11px;font-weight:600;color:var(--amber);margin:3px 0 8px;}
   .schedule-zone-heading{display:flex;justify-content:flex-start;padding:7px 10px 5px;background:var(--surface-2);border-bottom:1px solid var(--line);border-top:1px solid var(--line);}
   .schedule-zone-heading span{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.03em;color:var(--amber);border:1px solid var(--amber);border-radius:6px;padding:3px 7px;}
-  .schedule-status{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:12px;}
+  .schedule-status{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:9px;}
   .schedule-status b{font-size:15px;}
   .schedule-status small{display:block;color:var(--ink-muted);margin-top:3px;}
   .schedule-stop.past{opacity:.48;}
   .schedule-stop.current{background:var(--surface-2);color:var(--amber);}
   .schedule-stop.next{background:var(--amber-dim);color:var(--ink);}
   .schedule-stop.future{opacity:.95;}
+  .schedule-stop[data-stop-index]{scroll-margin-top:86px;}
+  .schedule-technical-badge{display:inline-block;margin-left:6px;padding:2px 5px;border:1px solid var(--amber-dim);border-radius:5px;color:var(--amber);font-size:9px;font-weight:800;letter-spacing:.03em;vertical-align:middle;white-space:nowrap;}
   .schedule-segment{padding:5px 11px 7px;color:var(--ink-muted);font-size:11px;text-align:center;border-bottom:1px solid var(--line);}
   .schedule-segment b{color:var(--teal);font-weight:600;}
   .schedule-stop-head{color:var(--ink-muted);font-size:10px;text-transform:uppercase;}
@@ -1414,7 +1416,7 @@
     <small id="dateLine"></small>
   </div>
 
-  <div class="topbar-right" id="topbarRight"><span id="appVersion" class="app-version">v1.0.8</span></div>
+  <div class="topbar-right" id="topbarRight"><span id="appVersion" class="app-version">v1.0.9</span></div>
 </div>
 
 <!-- ================= SEARCH ================= -->
@@ -2951,7 +2953,7 @@ function renderMain(){
   titleInput.hidden = true;
   staticTitle.hidden = true;
 
-  topbarRight.innerHTML = '<span class="app-version">v1.0.8</span>';
+  topbarRight.innerHTML = '<span class="app-version">v1.0.9</span>';
 
   if(mainView === 'wagons'){
 
@@ -2982,7 +2984,7 @@ function renderMain(){
       staticTitle.textContent =
         'Вагоны';
 
-      topbarRight.innerHTML='<span class="app-version">v1.0.8</span>';
+      topbarRight.innerHTML='<span class="app-version">v1.0.9</span>';
       renderSidebar();
 
       return;
@@ -3201,7 +3203,7 @@ function renderMain(){
   }
 
   if(!topbarRight.querySelector('.app-version')){
-    topbarRight.insertAdjacentHTML('beforeend','<span class="app-version">v1.0.8</span>');
+    topbarRight.insertAdjacentHTML('beforeend','<span class="app-version">v1.0.9</span>');
   }
 
   renderSidebar();
@@ -6471,10 +6473,12 @@ function parseCopiedYandexStops(raw){
 
     // Поддерживаем и уже подготовленный формат: Название | прибытие | отправление.
     if(name.includes('|')){
-      const p=name.split('|').map(v=>v.trim());
-      if(p[0] && !isScheduleNoise(p[0])){
+      const technical=/\*$/.test(p[0]);
+      const stationName=p[0].replace(/\*$/,'').trim();
+      if(stationName && !isScheduleNoise(stationName)){
         result.push({
-          name:p[0],
+          name:stationName,
+          technical,
           arrival:isScheduleTime(p[1])?p[1]:'',
           departure:isScheduleTime(p[2])?p[2]:'',
           stopTime:p[3]||'',
@@ -6490,6 +6494,7 @@ function parseCopiedYandexStops(raw){
       continue;
     }
 
+    const technical=/\*$/.test(name);
     const station=name.replace(/\*$/,'').trim();
     if(!station || isScheduleNoise(station)){
       i++;
@@ -6536,7 +6541,7 @@ function parseCopiedYandexStops(raw){
         else arrival=following[0];
       }
 
-      result.push({name:station,arrival,departure,stopTime,dayOffset:currentDay,dayLabel:currentDayLabel,timezoneOffsetMinutes:currentTimezoneOffset,timezoneLabel:currentTimezoneLabel});
+      result.push({name:station,technical,arrival,departure,stopTime,dayOffset:currentDay,dayLabel:currentDayLabel,timezoneOffsetMinutes:currentTimezoneOffset,timezoneLabel:currentTimezoneLabel});
       i=j;
     }else{
       i++;
@@ -6772,7 +6777,6 @@ function renderCurrentSchedule(){
       <div class="schedule-timer"><span id="scheduleStopLabel">Стоянка следующей</span><b id="scheduleStopTimer">—</b></div>
     </div>
     <div class="schedule-actions">
-      <button id="scheduleEditRouteBtn">Изменить остановки</button>
       <button id="scheduleOpenSourceBtn">Открыть Яндекс</button>
     </div>
   `;
@@ -6780,16 +6784,20 @@ function renderCurrentSchedule(){
   document.getElementById('scheduleOpenSourceBtn').addEventListener('click',()=>{
     if(x.sourceUrl)window.open(x.sourceUrl,'_blank');
   });
-  document.getElementById('scheduleEditRouteBtn').addEventListener('click',()=>{
-    yandexStopsInput.value=x.rawStopsText || (Array.isArray(x.stops)?x.stops.map(s=>{
-      if(s.raw)return s.raw;
-      return [s.name||'',s.arrival||'',s.stopTime?formatStopMinutes(s.stopTime):'',s.departure||''].filter(Boolean).join('\n');
-    }).join('\n'):'');
-    yandexStopsInput.scrollIntoView({behavior:'smooth',block:'center'});
-    yandexStopsInput.focus();
-  });
-
   const routeStops=Array.isArray(x.stops)?x.stops:[];
+  // Для поездов, сохранённых до появления отметки технических станций,
+  // восстанавливаем признак из исходного текста Яндекса.
+  if(x.rawStopsText && routeStops.length && routeStops.some(st=>typeof st.technical==='undefined')){
+    const reparsed=parseCopiedYandexStops(x.rawStopsText);
+    routeStops.forEach((st,i)=>{
+      if(typeof st.technical==='undefined'){
+        st.technical=!!reparsed[i]?.technical;
+      }
+    });
+    state.schedules=schedules;
+    saveState();
+  }
+
   const nowEl=document.getElementById('scheduleNowTimer');
   const arrEl=document.getElementById('scheduleArrivalTimer');
   const stopEl=document.getElementById('scheduleStopTimer');
@@ -6981,9 +6989,12 @@ function renderCurrentSchedule(){
           segment='<div class="schedule-segment">Перегон <b>'+escapeHtml(travel)+'</b></div>';
         }
       }
+      const technicalBadge=st.technical
+        ? '<span class="schedule-technical-badge">⚙ Техническая</span>'
+        : '';
       return dayHeading+zoneHeading+
         '<div class="schedule-stop future" data-stop-index="'+i+'">'+
-          '<div>'+escapeHtml(st.name)+'</div>'+
+          '<div>'+escapeHtml(st.name)+technicalBadge+'</div>'+
           '<div class="mono">'+escapeHtml(st.arrival||'—')+'</div>'+
           '<div class="mono">'+escapeHtml(stand||'—')+'</div>'+
           '<div class="mono">'+escapeHtml(st.departure||'—')+'</div>'+
@@ -6993,6 +7004,14 @@ function renderCurrentSchedule(){
     scheduleStops.innerHTML=
       '<div class="schedule-stop schedule-stop-head"><div>Остановка</div><div>Прибытие</div><div>Стоянка</div><div>Отправление</div></div>'+
       rows;
+
+    // После открытия расписания сразу показываем актуальную остановку.
+    const activeStop=scheduleStops.querySelector('.schedule-stop.current, .schedule-stop.next');
+    if(activeStop){
+      requestAnimationFrame(()=>{
+        activeStop.scrollIntoView({behavior:'smooth',block:'center'});
+      });
+    }
   }else{
     scheduleStops.hidden=true;
   }
