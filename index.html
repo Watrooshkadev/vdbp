@@ -1427,7 +1427,7 @@
     <small id="dateLine"></small>
   </div>
 
-  <div class="topbar-right" id="topbarRight"><span id="appVersion" class="app-version">v1.1.0</span></div>
+  <div class="topbar-right" id="topbarRight"><span id="appVersion" class="app-version">v1.1.1</span></div>
 </div>
 
 <!-- ================= SEARCH ================= -->
@@ -8347,54 +8347,203 @@ if('serviceWorker' in navigator){
 
 <script id="schedule-status-notify-js">
 (function(){
-  const NOTIFY_KEY='vagony_schedule_notify_v1', fired=new Set();
-  const prefs=()=>{try{return JSON.parse(localStorage.getItem(NOTIFY_KEY)||'{}')}catch(e){return {}}};
-  const savePrefs=v=>{try{localStorage.setItem(NOTIFY_KEY,JSON.stringify(v))}catch(e){}};
-  const key=(id,i,m)=>id+'|'+i+'|'+m;
-  const enabled=(id,i,m)=>!!prefs()[key(id,i,m)];
+  const NOTIFY_KEY='vagony_schedule_notify_v1';
+  const fired=new Set();
 
-  function liveStatus(x,now){
-    const stops=Array.isArray(x&&x.stops)?x.stops:[]; if(!stops.length)return null;
-    const dates=stops.map(st=>({a:scheduleZonedDate(x.date,st.arrival,x.timezone||'Europe/Moscow',Number(st.dayOffset)||0,Number(st.timezoneOffsetMinutes)||0),d:scheduleZonedDate(x.date,st.departure,x.timezone||'Europe/Moscow',Number(st.dayOffset)||0,Number(st.timezoneOffsetMinutes)||0)}));
-    if(dates[0]&&dates[0].d&&now<dates[0].d){const boarding=new Date(dates[0].d.getTime()-1800000);return {type:'wait',icon:'🕐',title:now>=boarding?'Ожидание отправления':'Ожидание',sub:now>=boarding?'Посадка · '+stops[0].departure:'Посадка с '+scheduleTimeMinusMinutes(stops[0].departure,30)};}
-    for(let i=0;i<stops.length;i++){const st=stops[i],d=dates[i],next=dates[i+1];if(d.a&&d.d&&now>=d.a&&now<d.d)return {type:'stop',icon:'🟠',title:'На станции',sub:st.name};if(d.d&&next&&next.a&&now>=d.d&&now<next.a)return {type:'travel',icon:'🚆',title:'В пути',sub:'Следующая: '+stops[i+1].name};if(d.a&&now<d.a)return {type:'travel',icon:'🚆',title:'В пути',sub:'Следующая: '+st.name};}
-    const last=stops[stops.length-1],ld=dates[dates.length-1];if(ld&&ld.a&&now>=ld.a)return {type:'done',icon:'✓',title:'Поезд уже прибыл',sub:last.name};return null;
+  function prefs(){
+    try{return JSON.parse(localStorage.getItem(NOTIFY_KEY)||'{}');}
+    catch(e){return {};}
+  }
+  function savePrefs(v){
+    try{localStorage.setItem(NOTIFY_KEY,JSON.stringify(v));}catch(e){}
+  }
+  function key(id,i,m){return id+'|'+i+'|'+m;}
+  function enabled(id,i,m){return !!prefs()[key(id,i,m)];}
+
+  function getSchedule(){
+    const list=Array.isArray(schedules)?schedules:[];
+    if(!list.length)return null;
+    return list.find(s=>s.id===currentScheduleId)||list[0];
+  }
+
+  function getLiveStatus(x,now){
+    const stops=Array.isArray(x.stops)?x.stops:[];
+    if(!stops.length)return null;
+
+    const dates=stops.map(st=>({
+      arrival:scheduleZonedDate(x.date,st.arrival,x.timezone||'Europe/Moscow',Number(st.dayOffset)||0,st.timezoneOffsetMinutes==null?0:Number(st.timezoneOffsetMinutes)),
+      departure:scheduleZonedDate(x.date,st.departure,x.timezone||'Europe/Moscow',Number(st.dayOffset)||0,st.timezoneOffsetMinutes==null?0:Number(st.timezoneOffsetMinutes))
+    }));
+
+    const first=stops[0];
+    const fd=dates[0]?.departure;
+    if(fd && now<fd){
+      const boarding=new Date(fd.getTime()-30*60000);
+      return now<boarding
+        ? {type:'wait',icon:'🕐',title:'Ожидание',sub:'Посадка с '+scheduleTimeMinusMinutes(first.departure,30)+' · отправление '+first.departure}
+        : {type:'stop',icon:'🟠',title:'Посадка',sub:'До отправления · '+first.name};
+    }
+
+    for(let i=0;i<stops.length;i++){
+      const st=stops[i],d=dates[i],next=stops[i+1],nd=dates[i+1];
+
+      if(d.arrival && d.departure && now>=d.arrival && now<d.departure){
+        return {type:'stop',icon:'🟠',title:'На станции',sub:st.name};
+      }
+
+      if(d.departure && nd?.arrival && now>=d.departure && now<nd.arrival){
+        return {type:'travel',icon:'🚆',title:'В пути',sub:'Следующая: '+next.name};
+      }
+
+      if(d.arrival && now<d.arrival){
+        return {type:'travel',icon:'🚆',title:'В пути',sub:'Следующая: '+st.name};
+      }
+    }
+
+    const last=stops[stops.length-1],ld=dates[dates.length-1];
+    if(ld?.arrival && now>=ld.arrival){
+      return {type:'done',icon:'✓',title:'Поезд уже прибыл',sub:last.name};
+    }
+    return null;
   }
 
   function updateStatus(){
-    const old=document.getElementById('topbarScheduleStatus');if(old)old.remove();
-    const list=Array.isArray(schedules)?schedules:[],x=list.find(s=>s.id===currentScheduleId)||list[0];if(!x)return;
-    const live=liveStatus(x,new Date());if(!live)return;
-    const el=document.createElement('span');el.id='topbarScheduleStatus';el.className='schedule-top-status '+live.type;el.title=live.sub||live.title;
-    el.innerHTML='<span>'+live.icon+'</span><b>'+live.title+(live.sub?' · '+live.sub:'')+'</b>';
-    const v=document.getElementById('appVersion');if(v)v.parentNode.insertBefore(el,v);
+    const right=document.getElementById('topbarRight');
+    const version=document.getElementById('appVersion');
+    if(!right || !version)return;
+
+    let el=document.getElementById('topbarScheduleStatus');
+    if(!el){
+      el=document.createElement('span');
+      el.id='topbarScheduleStatus';
+      el.className='schedule-top-status';
+      right.insertBefore(el,version);
+    }
+
+    const x=getSchedule();
+    const live=x ? getLiveStatus(x,new Date()) : null;
+
+    if(!live){
+      el.hidden=true;
+      el.textContent='';
+      return;
+    }
+
+    el.hidden=false;
+    el.className='schedule-top-status '+live.type;
+    el.title=live.sub||live.title;
+    el.textContent=live.icon+' '+live.title+(live.sub?' · '+live.sub:'');
   }
 
   function addButtons(){
-    const list=Array.isArray(schedules)?schedules:[],x=list.find(s=>s.id===currentScheduleId)||list[0];if(!x||!Array.isArray(x.stops))return;
+    const x=getSchedule();
+    if(!x || !Array.isArray(x.stops))return;
+
     document.querySelectorAll('#scheduleStops .schedule-stop[data-stop-index]').forEach(row=>{
-      const i=Number(row.dataset.stopIndex),st=x.stops[i];if(!st||!st.arrival||row.querySelector('.schedule-notify'))return;
-      const name=row.children[0];if(!name)return;const wrap=document.createElement('div');wrap.className='schedule-notify';
-      [30,15,5].forEach(m=>{const b=document.createElement('button');b.type='button';b.className='schedule-notify-btn'+(enabled(x.id,i,m)?' active':'');b.dataset.scheduleNotify=i;b.dataset.notifyMinutes=m;b.setAttribute('aria-pressed',enabled(x.id,i,m)?'true':'false');b.title='Напомнить за '+m+' минут';b.textContent='🔔 '+m;wrap.appendChild(b)});name.appendChild(wrap);
+      const i=Number(row.dataset.stopIndex);
+      const st=x.stops[i];
+      if(!st || !st.arrival || row.querySelector('.schedule-notify'))return;
+
+      const name=row.children[0];
+      if(!name)return;
+
+      const wrap=document.createElement('div');
+      wrap.className='schedule-notify';
+
+      [30,15,5].forEach(m=>{
+        const active=enabled(x.id,i,m);
+        const b=document.createElement('button');
+        b.type='button';
+        b.className='schedule-notify-btn'+(active?' active':'');
+        b.dataset.scheduleNotify=i;
+        b.dataset.notifyMinutes=m;
+        b.setAttribute('aria-pressed',active?'true':'false');
+        b.title='Напомнить за '+m+' минут';
+        b.textContent='🔔 '+m;
+        wrap.appendChild(b);
+      });
+      name.appendChild(wrap);
     });
   }
 
   function toggle(btn){
-    const list=Array.isArray(schedules)?schedules:[],x=list.find(s=>s.id===currentScheduleId)||list[0];if(!x)return;
-    const i=Number(btn.dataset.scheduleNotify),m=Number(btn.dataset.notifyMinutes),p=prefs(),k=key(x.id,i,m);if(p[k])delete p[k];else p[k]=true;savePrefs(p);btn.classList.toggle('active',!!p[k]);btn.setAttribute('aria-pressed',p[k]?'true':'false');
-    if(typeof showToast==='function')showToast(p[k]?'Напомним за '+m+' мин до '+x.stops[i].name:'Уведомление за '+m+' мин отключено');
-    if(p[k]&&'Notification'in window&&Notification.permission==='default')Notification.requestPermission().catch(()=>{});
+    const x=getSchedule();
+    if(!x)return;
+    const i=Number(btn.dataset.scheduleNotify);
+    const m=Number(btn.dataset.notifyMinutes);
+    const p=prefs(),k=key(x.id,i,m);
+
+    if(p[k])delete p[k];else p[k]=true;
+    savePrefs(p);
+
+    btn.classList.toggle('active',!!p[k]);
+    btn.setAttribute('aria-pressed',p[k]?'true':'false');
+
+    if(p[k] && 'Notification' in window && Notification.permission==='default'){
+      Notification.requestPermission().catch(()=>{});
+    }
+
+    if(typeof showToast==='function'){
+      showToast(p[k]?'Напомним за '+m+' мин до '+x.stops[i].name:'Уведомление за '+m+' мин отключено');
+    }
   }
 
   function check(){
-    const now=Date.now(),list=Array.isArray(schedules)?schedules:[];
-    list.forEach(x=>(x.stops||[]).forEach((st,i)=>{if(!st.arrival)return;[30,15,5].forEach(m=>{if(!enabled(x.id,i,m))return;const a=scheduleZonedDate(x.date,st.arrival,x.timezone||'Europe/Moscow',Number(st.dayOffset)||0,Number(st.timezoneOffsetMinutes)||0);if(!a)return;const diff=a.getTime()-now,fa=m*60000,k=key(x.id,i,m)+'|'+a.getTime();if(diff<=fa&&diff>fa-60000&&!fired.has(k)){fired.add(k);const title='🚆 Мы подъезжаем к станции',body=st.name+' · через '+m+' мин';if('Notification'in window&&Notification.permission==='granted')try{new Notification(title,{body,tag:k})}catch(e){}if(typeof showToast==='function')showToast(title+': '+body)}})}));
+    const now=Date.now();
+    const list=Array.isArray(schedules)?schedules:[];
+
+    list.forEach(x=>(x.stops||[]).forEach((st,i)=>{
+      if(!st.arrival)return;
+
+      [30,15,5].forEach(m=>{
+        if(!enabled(x.id,i,m))return;
+
+        const a=scheduleZonedDate(
+          x.date,st.arrival,x.timezone||'Europe/Moscow',
+          Number(st.dayOffset)||0,
+          st.timezoneOffsetMinutes==null?0:Number(st.timezoneOffsetMinutes)
+        );
+        if(!a)return;
+
+        const diff=a.getTime()-now;
+        const target=m*60000;
+        const fk=key(x.id,i,m)+'|'+a.getTime();
+
+        if(diff<=target && diff>target-60000 && !fired.has(fk)){
+          fired.add(fk);
+
+          const title='🚆 Мы подъезжаем к станции';
+          const body=st.name+' · через '+m+' мин';
+
+          if('Notification' in window && Notification.permission==='granted'){
+            try{new Notification(title,{body,tag:fk});}catch(e){}
+          }
+          if(typeof showToast==='function')showToast(title+': '+body);
+        }
+      });
+    }));
   }
 
-  document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-schedule-notify]');if(b){e.preventDefault();e.stopPropagation();toggle(b)}});
-  setInterval(()=>{updateStatus();addButtons();check()},15000);setInterval(updateStatus,1000);
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden){updateStatus();addButtons();check()}});
-  setTimeout(()=>{updateStatus();addButtons();check()},0);
+  document.addEventListener('click',e=>{
+    const b=e.target.closest && e.target.closest('[data-schedule-notify]');
+    if(b){
+      e.preventDefault();
+      e.stopPropagation();
+      toggle(b);
+    }
+  });
+
+  setInterval(updateStatus,1000);
+  setInterval(()=>{addButtons();check();},15000);
+
+  document.addEventListener('visibilitychange',()=>{
+    if(!document.hidden){updateStatus();addButtons();check();}
+  });
+
+  setTimeout(()=>{
+    try{updateStatus();addButtons();check();}
+    catch(e){}
+  },0);
 })();
 </script></body>
 </html>
