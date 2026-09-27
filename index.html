@@ -2896,6 +2896,7 @@ function renderMain(){
       staticTitle.textContent =
         'Вагоны';
 
+      topbarRight.innerHTML='<span class="app-version">v1.0.0</span>';
       renderSidebar();
 
       return;
@@ -3111,6 +3112,10 @@ function renderMain(){
     scheduleView.hidden=false;
     renderScheduleView();
 
+  }
+
+  if(!topbarRight.querySelector('.app-version')){
+    topbarRight.insertAdjacentHTML('beforeend','<span class="app-version">v1.0.0</span>');
   }
 
   renderSidebar();
