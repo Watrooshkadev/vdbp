@@ -6348,6 +6348,12 @@ function parseCopiedYandexStops(raw){
     while(j<lines.length && following.length<3){
       const v=lines[j];
 
+      // У начальной станции Яндекс показывает «—» вместо прибытия/стоянки.
+      if((v==='—' || v==='–' || v==='-') && following.length===0){
+        j++;
+        continue;
+      }
+
       if(isScheduleTime(v) || isScheduleDuration(v)){
         following.push(v);
         j++;
