@@ -1427,7 +1427,7 @@
     <small id="dateLine"></small>
   </div>
 
-  <div class="topbar-right" id="topbarRight"><span id="appVersion" class="app-version">v1.1.1</span></div>
+  <div class="topbar-right" id="topbarRight"><span id="appVersion" class="app-version">v1.1.2</span></div>
 </div>
 
 <!-- ================= SEARCH ================= -->
@@ -2824,20 +2824,41 @@ wagonNameInput.addEventListener('keydown',e=>{
 
 async function forceAppUpdate(){
   try{
-    showToast('Проверяем новую версию…');
+    showToast('Обновляем приложение…');
 
     if('serviceWorker' in navigator){
       const registrations=await navigator.serviceWorker.getRegistrations();
-      await Promise.all(registrations.map(r=>r.update().catch(()=>{})));
-      await Promise.all(registrations.map(r=>r.unregister().catch(()=>{})));
+
+      // Просим браузер получить свежий sw.js.
+      await Promise.all(
+        registrations.map(r=>r.update().catch(()=>{}))
+      );
+
+      // Если новая версия уже установилась — активируем её.
+      await Promise.all(
+        registrations.map(r=>{
+          if(r.waiting){
+            r.waiting.postMessage({type:'SKIP_WAITING'});
+          }
+          return Promise.resolve();
+        })
+      );
     }
 
+    // Удаляем только Cache Storage.
+    // localStorage / IndexedDB / данные приложения НЕ трогаем.
     if('caches' in window){
       const keys=await caches.keys();
-      await Promise.all(keys.map(k=>caches.delete(k).catch(()=>false)));
+      await Promise.all(
+        keys.map(k=>caches.delete(k).catch(()=>false))
+      );
     }
 
-    window.location.href=window.location.pathname+'?app-update='+Date.now();
+    // cache-busting URL заставляет браузер получить новый документ.
+    window.location.replace(
+      window.location.pathname+
+      '?app-update='+Date.now()
+    );
   }catch(e){
     window.location.reload();
   }
@@ -8336,7 +8357,7 @@ if('serviceWorker' in navigator){
     () => {
 
       navigator.serviceWorker
-        .register('sw.js?v=19')
+        .register('sw.js?v=20')
         .catch(() => {});
 
     }
