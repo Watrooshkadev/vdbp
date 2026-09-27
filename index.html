@@ -1130,16 +1130,6 @@
   .schedule-fields{display:grid;grid-template-columns:1fr 1fr 170px;gap:8px;}
   .schedule-fields input{width:100%;background:var(--surface-2);border:1px solid var(--line);border-radius:7px;color:var(--ink);padding:9px 10px;font:inherit;}
   .app-version{font-size:10px;color:var(--ink-muted);font-family:ui-monospace,monospace;margin-left:8px;white-space:nowrap;}
-  .schedule-top-status{display:inline-flex;align-items:center;gap:5px;max-width:260px;padding:5px 8px;border:1px solid var(--line);border-radius:7px;background:var(--surface-2);font-size:10px;line-height:1.15;color:var(--ink-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .schedule-top-status b{color:var(--ink);font-size:10px;overflow:hidden;text-overflow:ellipsis;}
-  .schedule-top-status.wait{color:var(--amber);border-color:var(--amber-dim);}
-  .schedule-top-status.travel{color:var(--teal);border-color:var(--teal);}
-  .schedule-top-status.stop{color:var(--amber);border-color:var(--amber-dim);}
-  .schedule-top-status.done{color:var(--teal);border-color:var(--teal);}
-  .schedule-notify{display:flex;justify-content:flex-end;gap:4px;margin-top:3px;}
-  .schedule-notify-btn{min-width:30px;height:25px;padding:0 5px;background:transparent;border:1px solid var(--line);border-radius:6px;color:var(--ink-muted);font-size:11px;cursor:pointer;}
-  .schedule-notify-btn.active{color:var(--amber);border-color:var(--amber);background:var(--surface-2);}
-  .schedule-notify-btn:hover{color:var(--amber);border-color:var(--amber-dim);}
   .schedule-stops-input{width:100%;min-height:260px;resize:vertical;background:var(--surface-2);border:1px solid var(--line);border-radius:7px;color:var(--ink);padding:10px 12px;font:13px/1.5 ui-monospace,monospace;margin-top:10px;}
   .schedule-stops-input:focus{outline:none;border-color:var(--amber-dim);}
   .schedule-parse-info{font-size:11px;color:var(--ink-muted);line-height:1.45;margin-top:6px;}
@@ -1153,7 +1143,7 @@
   .schedule-timer span{display:block;color:var(--ink-muted);font-size:10px;margin-bottom:3px;text-transform:uppercase;}
   .schedule-timer b{font-family:ui-monospace,monospace;font-size:18px;}
   .schedule-stops{border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:auto;}
-  .schedule-stop{display:grid;grid-template-columns:1fr 85px 85px 100px;gap:8px;padding:9px 11px;border-bottom:1px solid var(--line);align-items:center;font-size:12px;}  .schedule-stop-name{min-width:0;}
+  .schedule-stop{display:grid;grid-template-columns:1fr 85px 85px 100px;gap:8px;padding:9px 11px;border-bottom:1px solid var(--line);align-items:center;font-size:12px;}
   .schedule-stop:last-child{border-bottom:0;}
   .schedule-stop.current{background:var(--surface-2);color:var(--amber);}
   .schedule-timezone{font-size:11px;font-weight:600;color:var(--amber);margin:3px 0 8px;}
@@ -1186,7 +1176,7 @@
     .notes-editor textarea{min-height:300px;}
     .schedule-fields{grid-template-columns:1fr;}
     .schedule-timers{grid-template-columns:1fr;}
-    .schedule-stop{grid-template-columns:1fr 65px 65px 80px;}    .schedule-top-status{max-width:180px;}
+    .schedule-stop{grid-template-columns:1fr 65px 65px 80px;}
   }
 
   /* ---------- Modals ---------- */
@@ -1403,7 +1393,18 @@
     }
   }
 </style>
-</head>
+<style id="schedule-status-notify-css">
+.schedule-top-status{display:inline-flex;align-items:center;gap:5px;max-width:260px;padding:5px 8px;border:1px solid var(--line);border-radius:7px;background:var(--surface-2);font-size:10px;line-height:1.15;color:var(--ink-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.schedule-top-status b{color:var(--ink);font-size:10px;overflow:hidden;text-overflow:ellipsis}
+.schedule-top-status.wait{color:var(--amber);border-color:var(--amber-dim)}
+.schedule-top-status.travel{color:var(--teal);border-color:var(--teal)}
+.schedule-top-status.stop{color:var(--amber);border-color:var(--amber-dim)}
+.schedule-top-status.done{color:var(--teal);border-color:var(--teal)}
+.schedule-notify{display:flex;justify-content:flex-end;gap:4px;margin-top:3px}
+.schedule-notify-btn{min-width:30px;height:25px;padding:0 5px;background:transparent;border:1px solid var(--line);border-radius:6px;color:var(--ink-muted);font-size:11px;cursor:pointer}
+.schedule-notify-btn.active{color:var(--amber);border-color:var(--amber);background:var(--surface-2)}
+.schedule-notify-btn:hover{color:var(--amber);border-color:var(--amber-dim)}
+</style></head>
 
 <body>
 
@@ -3217,7 +3218,6 @@ function renderMain(){
   }
 
   renderSidebar();
-  updateTopbarScheduleStatus();
 
 }
 
@@ -6218,14 +6218,7 @@ function downloadAgentReportXls(){
     'table{border-collapse:collapse;font-family:Arial;font-size:11pt}'+
     'td{border:1px solid #999;padding:5px}'+
     '.head{font-weight:bold;background:#ddd}.cat{font-weight:bold;background:#eee}.total{font-weight:bold;background:#f3f3f3}'+
-    '</style></head><body><table>'+htmlRows+'</table><script>
-setInterval(updateTopbarScheduleStatus,1000);
-setInterval(checkScheduleNotifications,15000);
-document.addEventListener('visibilitychange',()=>{
-  if(!document.hidden){updateTopbarScheduleStatus();checkScheduleNotifications();}
-});
-</script>
-</body></html>';
+    '</style></head><body><table>'+htmlRows+'</table></body></html>';
 
   downloadBlob(
     'otchet-agenta-'+(agentReport.date||new Date().toISOString().slice(0,10))+'.xls',
@@ -6774,112 +6767,6 @@ function scheduleStopDate(stop,baseDate,timezone){
   return scheduleZonedDate(baseDate,time,timezone||'Europe/Moscow',Number(stop.dayOffset)||0);
 }
 
-
-function getScheduleLiveStatus(x, now=new Date()){
-  const stops=Array.isArray(x?.stops)?x.stops:[];
-  if(!stops.length)return null;
-  const dates=stops.map(st=>({
-    arrival:scheduleZonedDate(x.date,st.arrival,x.timezone||'Europe/Moscow',Number(st.dayOffset)||0,Number(st.timezoneOffsetMinutes||0)),
-    departure:scheduleZonedDate(x.date,st.departure,x.timezone||'Europe/Moscow',Number(st.dayOffset)||0,Number(st.timezoneOffsetMinutes||0))
-  }));
-  const first=dates[0];
-  if(first?.departure && now<first.departure){
-    const boarding=new Date(first.departure.getTime()-30*60000);
-    return {type:'wait',icon:'🕐',title:now>=boarding?'Ожидание отправления':'Ожидание',sub:now>=boarding?'Посадка · '+stops[0].departure:'Посадка с '+scheduleTimeMinusMinutes(stops[0].departure,30)};
-  }
-  for(let i=0;i<stops.length;i++){
-    const st=stops[i],d=dates[i],next=stops[i+1],nd=dates[i+1];
-    if(d.arrival && d.departure && now>=d.arrival && now<d.departure)return {type:'stop',icon:'🟠',title:'На станции',sub:st.name};
-    if(d.departure && nd?.arrival && now>=d.departure && now<nd.arrival)return {type:'travel',icon:'🚆',title:'В пути',sub:'Следующая: '+nd.name};
-    if(d.arrival && now<d.arrival)return {type:'travel',icon:'🚆',title:'В пути',sub:'Следующая: '+st.name};
-  }
-  const last=stops[stops.length-1],lastDate=dates[dates.length-1];
-  if(lastDate?.arrival && now>=lastDate.arrival)return {type:'done',icon:'✓',title:'Поезд уже прибыл',sub:last.name};
-  return null;
-}
-
-function updateTopbarScheduleStatus(){
-  const old=document.getElementById('topbarScheduleStatus');
-  if(old)old.remove();
-  const x=schedules.find(s=>s.id===currentScheduleId)||schedules[0];
-  if(!x)return;
-  const live=getScheduleLiveStatus(x);
-  if(!live)return;
-  const el=document.createElement('span');
-  el.id='topbarScheduleStatus';
-  el.className='schedule-top-status '+live.type;
-  el.title=live.sub||live.title;
-  el.innerHTML='<span>'+live.icon+'</span><b>'+escapeHtml(live.title)+(live.sub?' · '+escapeHtml(live.sub):'')+'</b>';
-  const version=topbarRight.querySelector('.app-version');
-  if(version)topbarRight.insertBefore(el,version); else topbarRight.appendChild(el);
-}
-
-const SCHEDULE_NOTIFY_KEY='vagony_schedule_notify_v1';
-function getScheduleNotificationPrefs(){
-  try{const raw=localStorage.getItem(SCHEDULE_NOTIFY_KEY);return raw?JSON.parse(raw):{};}catch(e){return {};}
-}
-function saveScheduleNotificationPrefs(prefs){
-  try{localStorage.setItem(SCHEDULE_NOTIFY_KEY,JSON.stringify(prefs));}catch(e){}
-}
-function scheduleNotifyKey(scheduleId,stopIndex,minutes){return scheduleId+'|'+stopIndex+'|'+minutes;}
-function isScheduleNotificationEnabled(scheduleId,stopIndex,minutes){
-  const prefs=getScheduleNotificationPrefs();
-  return !!prefs[scheduleNotifyKey(scheduleId,stopIndex,minutes)];
-}
-function toggleScheduleNotification(scheduleId,stopIndex,minutes,btn){
-  const prefs=getScheduleNotificationPrefs();
-  const key=scheduleNotifyKey(scheduleId,stopIndex,minutes);
-  if(prefs[key]){
-    delete prefs[key]; saveScheduleNotificationPrefs(prefs);
-    btn.classList.remove('active'); btn.setAttribute('aria-pressed','false');
-    showToast('Уведомление за '+minutes+' мин отключено'); return;
-  }
-  const enable=()=>{
-    prefs[key]=true; saveScheduleNotificationPrefs(prefs);
-    btn.classList.add('active'); btn.setAttribute('aria-pressed','true');
-    showToast('Напомним за '+minutes+' мин до '+(schedules.find(s=>s.id===scheduleId)?.stops?.[stopIndex]?.name||'станции'));
-  };
-  if('Notification' in window && Notification.permission==='default'){
-    Notification.requestPermission().then(permission=>{
-      if(permission==='granted')enable();
-      else {enable();showToast('Уведомление сохранено, но разрешение браузера не выдано');}
-    }).catch(()=>enable());
-  }else enable();
-}
-
-const scheduleNotificationFired=new Set();
-function fireScheduleNotification(x,stopIndex,minutes,arrival){
-  const stop=x?.stops?.[stopIndex];
-  if(!stop||!arrival)return;
-  const fireKey=scheduleNotifyKey(x.id,stopIndex,minutes)+'|'+arrival.getTime();
-  if(scheduleNotificationFired.has(fireKey))return;
-  scheduleNotificationFired.add(fireKey);
-  const title='🚆 Мы подъезжаем к станции';
-  const body=stop.name+(minutes?' · через '+minutes+' мин':'');
-  try{
-    if('Notification' in window && Notification.permission==='granted'){
-      new Notification(title,{body,tag:'schedule-'+x.id+'-'+stopIndex+'-'+minutes});
-    }
-  }catch(e){}
-  showToast(title+': '+body);
-}
-function checkScheduleNotifications(){
-  const now=new Date();
-  schedules.forEach(x=>{
-    const stops=Array.isArray(x.stops)?x.stops:[];
-    stops.forEach((st,i)=>{
-      if(!st.arrival)return;
-      [30,15,5].forEach(minutes=>{
-        if(!isScheduleNotificationEnabled(x.id,i,minutes))return;
-        const arrival=scheduleZonedDate(x.date,st.arrival,x.timezone||'Europe/Moscow',Number(st.dayOffset)||0,Number(st.timezoneOffsetMinutes)||0);
-        if(!arrival)return;
-        const diff=arrival.getTime()-now.getTime();
-        if(diff<=minutes*60000 && diff>Math.max(0,minutes*60000-30000))fireScheduleNotification(x,i,minutes,arrival);
-      });
-    });
-  });
-}
-
 function renderCurrentSchedule(){
   const x=schedules.find(s=>s.id===currentScheduleId)||schedules[0];
   if(!x){
@@ -7118,13 +7005,7 @@ function renderCurrentSchedule(){
         : '';
       return dayHeading+zoneHeading+
         '<div class="schedule-stop future" data-stop-index="'+i+'">'+
-          '<div class="schedule-stop-name">'+escapeHtml(st.name)+technicalBadge+
-            (st.arrival
-              ? '<div class="schedule-notify">'+[30,15,5].map(minutes=>
-                  '<button type="button" class="schedule-notify-btn '+(isScheduleNotificationEnabled(x.id,i,minutes)?'active':'')+'" data-schedule-notify="'+i+'" data-notify-minutes="'+minutes+'" aria-pressed="'+(isScheduleNotificationEnabled(x.id,i,minutes)?'true':'false')+'" title="Напомнить за '+minutes+' минут">🔔 '+minutes+'</button>'
-                ).join('')+'</div>'
-              : '')+
-          '</div>'+
+          '<div>'+escapeHtml(st.name)+technicalBadge+'</div>'+
           '<div class="mono">'+escapeHtml(st.arrival||'—')+'</div>'+
           '<div class="mono">'+escapeHtml(stand||'—')+'</div>'+
           '<div class="mono">'+escapeHtml(st.departure||'—')+'</div>'+
@@ -7134,13 +7015,6 @@ function renderCurrentSchedule(){
     scheduleStops.innerHTML=
       '<div class="schedule-stop schedule-stop-head"><div>Остановка</div><div>Прибытие</div><div>Стоянка</div><div>Отправление</div></div>'+
       rows;
-
-    scheduleStops.querySelectorAll('[data-schedule-notify]').forEach(btn=>{
-      btn.addEventListener('click',e=>{
-        e.stopPropagation();
-        toggleScheduleNotification(x.id,Number(btn.dataset.scheduleNotify),Number(btn.dataset.notifyMinutes),btn);
-      });
-    });
 
     // После открытия расписания сразу показываем актуальную остановку.
     const activeStop=scheduleStops.querySelector('.schedule-stop.current, .schedule-stop.next');
@@ -8471,5 +8345,56 @@ if('serviceWorker' in navigator){
 }
 </script>
 
-</body>
+<script id="schedule-status-notify-js">
+(function(){
+  const NOTIFY_KEY='vagony_schedule_notify_v1', fired=new Set();
+  const prefs=()=>{try{return JSON.parse(localStorage.getItem(NOTIFY_KEY)||'{}')}catch(e){return {}}};
+  const savePrefs=v=>{try{localStorage.setItem(NOTIFY_KEY,JSON.stringify(v))}catch(e){}};
+  const key=(id,i,m)=>id+'|'+i+'|'+m;
+  const enabled=(id,i,m)=>!!prefs()[key(id,i,m)];
+
+  function liveStatus(x,now){
+    const stops=Array.isArray(x&&x.stops)?x.stops:[]; if(!stops.length)return null;
+    const dates=stops.map(st=>({a:scheduleZonedDate(x.date,st.arrival,x.timezone||'Europe/Moscow',Number(st.dayOffset)||0,Number(st.timezoneOffsetMinutes)||0),d:scheduleZonedDate(x.date,st.departure,x.timezone||'Europe/Moscow',Number(st.dayOffset)||0,Number(st.timezoneOffsetMinutes)||0)}));
+    if(dates[0]&&dates[0].d&&now<dates[0].d){const boarding=new Date(dates[0].d.getTime()-1800000);return {type:'wait',icon:'🕐',title:now>=boarding?'Ожидание отправления':'Ожидание',sub:now>=boarding?'Посадка · '+stops[0].departure:'Посадка с '+scheduleTimeMinusMinutes(stops[0].departure,30)};}
+    for(let i=0;i<stops.length;i++){const st=stops[i],d=dates[i],next=dates[i+1];if(d.a&&d.d&&now>=d.a&&now<d.d)return {type:'stop',icon:'🟠',title:'На станции',sub:st.name};if(d.d&&next&&next.a&&now>=d.d&&now<next.a)return {type:'travel',icon:'🚆',title:'В пути',sub:'Следующая: '+stops[i+1].name};if(d.a&&now<d.a)return {type:'travel',icon:'🚆',title:'В пути',sub:'Следующая: '+st.name};}
+    const last=stops[stops.length-1],ld=dates[dates.length-1];if(ld&&ld.a&&now>=ld.a)return {type:'done',icon:'✓',title:'Поезд уже прибыл',sub:last.name};return null;
+  }
+
+  function updateStatus(){
+    const old=document.getElementById('topbarScheduleStatus');if(old)old.remove();
+    const list=Array.isArray(window.schedules)?window.schedules:[],x=list.find(s=>s.id===window.currentScheduleId)||list[0];if(!x)return;
+    const live=liveStatus(x,new Date());if(!live)return;
+    const el=document.createElement('span');el.id='topbarScheduleStatus';el.className='schedule-top-status '+live.type;el.title=live.sub||live.title;
+    el.innerHTML='<span>'+live.icon+'</span><b>'+live.title+(live.sub?' · '+live.sub:'')+'</b>';
+    const v=document.getElementById('appVersion');if(v)v.parentNode.insertBefore(el,v);
+  }
+
+  function addButtons(){
+    const list=Array.isArray(window.schedules)?window.schedules:[],x=list.find(s=>s.id===window.currentScheduleId)||list[0];if(!x||!Array.isArray(x.stops))return;
+    document.querySelectorAll('#scheduleStops .schedule-stop[data-stop-index]').forEach(row=>{
+      const i=Number(row.dataset.stopIndex),st=x.stops[i];if(!st||!st.arrival||row.querySelector('.schedule-notify'))return;
+      const name=row.children[0];if(!name)return;const wrap=document.createElement('div');wrap.className='schedule-notify';
+      [30,15,5].forEach(m=>{const b=document.createElement('button');b.type='button';b.className='schedule-notify-btn'+(enabled(x.id,i,m)?' active':'');b.dataset.scheduleNotify=i;b.dataset.notifyMinutes=m;b.setAttribute('aria-pressed',enabled(x.id,i,m)?'true':'false');b.title='Напомнить за '+m+' минут';b.textContent='🔔 '+m;wrap.appendChild(b)});name.appendChild(wrap);
+    });
+  }
+
+  function toggle(btn){
+    const list=Array.isArray(window.schedules)?window.schedules:[],x=list.find(s=>s.id===window.currentScheduleId)||list[0];if(!x)return;
+    const i=Number(btn.dataset.scheduleNotify),m=Number(btn.dataset.notifyMinutes),p=prefs(),k=key(x.id,i,m);if(p[k])delete p[k];else p[k]=true;savePrefs(p);btn.classList.toggle('active',!!p[k]);btn.setAttribute('aria-pressed',p[k]?'true':'false');
+    if(typeof showToast==='function')showToast(p[k]?'Напомним за '+m+' мин до '+x.stops[i].name:'Уведомление за '+m+' мин отключено');
+    if(p[k]&&'Notification'in window&&Notification.permission==='default')Notification.requestPermission().catch(()=>{});
+  }
+
+  function check(){
+    const now=Date.now(),list=Array.isArray(window.schedules)?window.schedules:[];
+    list.forEach(x=>(x.stops||[]).forEach((st,i)=>{if(!st.arrival)return;[30,15,5].forEach(m=>{if(!enabled(x.id,i,m))return;const a=scheduleZonedDate(x.date,st.arrival,x.timezone||'Europe/Moscow',Number(st.dayOffset)||0,Number(st.timezoneOffsetMinutes)||0);if(!a)return;const diff=a.getTime()-now,fa=m*60000,k=key(x.id,i,m)+'|'+a.getTime();if(diff<=fa&&diff>fa-60000&&!fired.has(k)){fired.add(k);const title='🚆 Мы подъезжаем к станции',body=st.name+' · через '+m+' мин';if('Notification'in window&&Notification.permission==='granted')try{new Notification(title,{body,tag:k})}catch(e){}if(typeof showToast==='function')showToast(title+': '+body)}})}));
+  }
+
+  document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-schedule-notify]');if(b){e.preventDefault();e.stopPropagation();toggle(b)}});
+  setInterval(()=>{updateStatus();addButtons();check()},15000);setInterval(updateStatus,1000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden){updateStatus();addButtons();check()}});
+  setTimeout(()=>{updateStatus();addButtons();check()},0);
+})();
+</script></body>
 </html>
