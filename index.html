@@ -6266,7 +6266,7 @@ function formatDuration(ms){
 function parseYandexUrl(raw){
   try{
     const u=new URL(raw.trim());
-    if(!/yandex\\.(ru|com)/i.test(u.hostname) || !/rasp/i.test(u.hostname+u.pathname)) return null;
+    if(!/yandex\.(ru|com)/i.test(u.hostname) || !/rasp/i.test(u.hostname+u.pathname)) return null;
     const q=u.searchParams;
     const out={
       sourceUrl:u.href,
@@ -6284,7 +6284,7 @@ function parseYandexUrl(raw){
 
     const when=q.get('when')||'';
     if(when){
-      const dm=when.match(/(\\d{1,2})\\s+([^,\\d]+?)(?:\\s+(\\d{4}))?$/i);
+      const dm=when.match(/(\d{1,2})\s+([^,\d]+?)(?:\s+(\d{4}))?$/i);
       if(dm){
         const months={
           'января':0,'февраля':1,'марта':2,'апреля':3,'мая':4,'июня':5,
@@ -6301,18 +6301,18 @@ function parseYandexUrl(raw){
     const dep=q.get('departure_from');
     if(dep){
       out.departure=decodeURIComponent(dep).replace(' ','T').replace(' ','T');
-      if(!out.date && /^\\d{4}-\\d{2}-\\d{2}/.test(out.departure))out.date=out.departure.slice(0,10);
+      if(!out.date && /^\d{4}-\d{2}-\d{2}/.test(out.departure))out.date=out.departure.slice(0,10);
     }
 
-    const m=u.pathname.match(/\\/thread\\/([^/]+)/i);
+    const m=u.pathname.match(/\/thread\/([^/]+)/i);
     if(m){
       out.uid=decodeURIComponent(m[1]);
       const part=out.uid.match(/^R_(.+?)_/i);
       if(part)out.trainNumber=part[1];
     }
 
-    if(out.fromId && /^\\d+$/.test(out.fromId))out.fromId='s'+out.fromId;
-    if(out.toId && /^\\d+$/.test(out.toId))out.toId='s'+out.toId;
+    if(out.fromId && /^\d+$/.test(out.fromId))out.fromId='s'+out.fromId;
+    if(out.toId && /^\d+$/.test(out.toId))out.toId='s'+out.toId;
 
     if(!out.fromName && out.fromId==='s9612089')out.fromName='Нижний Новгород';
     if(!out.toName && out.toId==='s9613022')out.toName='Новороссийск';
