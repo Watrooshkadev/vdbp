@@ -1419,13 +1419,9 @@
   <div class="agent-report-toolbar">
     <select id="agentReportCategory">
       <option value="">Категория для нового товара</option>
-      <option>ЧАЙ</option>
-      <option>НЕПРОДОВОЛЬСТВЕННЫЕ ТОВАРЫ</option>
-      <option>ПРОДОВОЛЬСТВЕННЫЕ ТОВАРЫ</option>
-      <option>КОФЕЙНЫЕ НАПИТКИ</option>
-      <option>АКЦИЯ</option>
     </select>
     <button id="agentReportAddBtn" class="primary">+ Добавить товар</button>
+    <button id="agentReportAddCategoryBtn">+ Категория</button>
     <button id="agentReportExcelBtn">Excel (.xls)</button>
     <button id="agentReportGoogleBtn">Google Таблицы (.csv)</button>
     <button id="agentReportNumbersBtn">Numbers / Apple (.xls)</button>
@@ -2053,6 +2049,7 @@ function loadState(){
       if(!Array.isArray(parsed.receipts)) parsed.receipts = [];
       if(!Array.isArray(parsed.transfers)) parsed.transfers = [];
       if(!Array.isArray(parsed.agentReportRows)) parsed.agentReportRows = [];
+      if(!Array.isArray(parsed.agentReportCategories)) parsed.agentReportCategories = [];
       if(!parsed.agentReport) parsed.agentReport = {title:'Отчёт агента', date:''};
 
       return parsed;
@@ -2071,6 +2068,7 @@ function loadState(){
       date:''
     },
     agentReportRows:[],
+    agentReportCategories:[],
     currentWagonId:null
   };
 }
@@ -2095,6 +2093,9 @@ let allReceipts = state.receipts;
 let allTransfers = state.transfers;
 let agentReport = state.agentReport || {title:'Отчёт агента', date:''};
 let agentReportRows = state.agentReportRows || [];
+let agentReportCategories = Array.isArray(state.agentReportCategories)
+  ? state.agentReportCategories
+  : [];
 
 let currentWagonId = state.currentWagonId;
 
@@ -2137,6 +2138,8 @@ const agentReportBody = document.getElementById('agentReportBody');
 const agentReportFoot = document.getElementById('agentReportFoot');
 const agentReportTitle = document.getElementById('agentReportTitle');
 const agentReportDate = document.getElementById('agentReportDate');
+const agentReportCategory = document.getElementById('agentReportCategory');
+const agentReportAddCategoryBtn = document.getElementById('agentReportAddCategoryBtn');
 
 const addOverlay = document.getElementById('addOverlay');
 const addForm = document.getElementById('addForm');
@@ -5553,6 +5556,7 @@ function agentReportRowsNormalized(){
 function saveAgentReport(){
   state.agentReport = agentReport;
   state.agentReportRows = agentReportRows;
+  state.agentReportCategories = agentReportCategories;
   saveState();
 }
 
@@ -5582,10 +5586,51 @@ function agentReportCategoryList(){
     'КОФЕЙНЫЕ НАПИТКИ',
     'АКЦИЯ'
   ];
-  const custom=agentReportRows
+  const custom=agentReportCategories
+    .map(c=>String(c||'').trim())
+    .filter(Boolean);
+  const fromRows=agentReportRows
     .map(r=>String(r.category||'').trim())
     .filter(Boolean);
-  return [...new Set([...defaults,...custom])];
+  return [...new Set([...defaults,...custom,...fromRows])];
+}
+
+function renderAgentReportCategorySelect(){
+  const categories=agentReportCategoryList();
+  const current=agentReportCategory.value;
+  agentReportCategory.innerHTML=
+    '<option value="">Категория для нового товара</option>'+
+    categories.map(c=>'<option value="'+escapeAttr(c)+'">'+escapeHtml(c)+'</option>').join('');
+  if(current && categories.includes(current)){
+    agentReportCategory.value=current;
+  }
+}
+
+function addAgentReportCategory(){
+  const name=prompt('Название новой категории:');
+  if(name===null) return;
+  const category=name.trim();
+  if(!category){
+    showToast('Введите название категории');
+    return;
+  }
+
+  const exists=agentReportCategoryList()
+    .some(c=>c.toLowerCase()===category.toLowerCase());
+
+  if(exists){
+    agentReportCategory.value=agentReportCategoryList()
+      .find(c=>c.toLowerCase()===category.toLowerCase());
+    showToast('Такая категория уже есть');
+    return;
+  }
+
+  agentReportCategories.push(category);
+  saveAgentReport();
+  renderAgentReportCategorySelect();
+  agentReportCategory.value=category;
+  renderAgentReportView();
+  showToast('Категория «<b>'+escapeHtml(category)+'</b>» добавлена');
 }
 
 function agentReportRowsNormalized(){
@@ -5662,6 +5707,7 @@ function renderAgentReportView(){
     grouped.get(r.category).push(r);
   });
 
+  renderAgentReportCategorySelect();
   const categoryOptions=agentReportCategoryList().map(c=>`<option value="${escapeAttr(c)}">${escapeHtml(c)}</option>`).join('');
 
   let body='';
@@ -5828,6 +5874,7 @@ agentReportDate.addEventListener('change', () => {
   saveAgentReport();
 });
 document.getElementById('agentReportAddBtn').addEventListener('click', addAgentReportRow);
+agentReportAddCategoryBtn.addEventListener('click', addAgentReportCategory);
 document.getElementById('agentReportExcelBtn').addEventListener('click', downloadAgentReportXls);
 document.getElementById('agentReportNumbersBtn').addEventListener('click', downloadAgentReportXls);
 document.getElementById('agentReportGoogleBtn').addEventListener('click', downloadAgentReportCsv);
