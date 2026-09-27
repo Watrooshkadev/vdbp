@@ -6681,11 +6681,7 @@ function renderCurrentSchedule(){
     yandexStopsInput.focus();
   });
 
-  const dep=x.departure?scheduleZonedDate(x.date,x.departure,x.timezone||'Europe/Moscow'):null;
-  const arr=x.arrival?scheduleZonedDate(x.date,x.arrival,x.timezone||'Europe/Moscow'):null;
-  const now=new Date();
   const nowEl=document.getElementById('scheduleNowTimer');
-  const depEl=document.getElementById('scheduleDepartureTimer');
   const arrEl=document.getElementById('scheduleArrivalTimer');
   const stopEl=document.getElementById('scheduleStopTimer');
 
@@ -6772,8 +6768,8 @@ function renderCurrentSchedule(){
 
       // Для старых записей, где стоянка не сохранилась, рассчитываем её.
       if(!stand && st.arrival && st.departure){
-        const aa=scheduleZonedDate(x.date,st.arrival,x.timezone||'Europe/Moscow');
-        const dd=scheduleZonedDate(x.date,st.departure,x.timezone||'Europe/Moscow');
+        const aa=scheduleZonedDate(x.date,st.arrival,x.timezone||'Europe/Moscow',Number(st.dayOffset)||0);
+        const dd=scheduleZonedDate(x.date,st.departure,x.timezone||'Europe/Moscow',Number(st.dayOffset)||0);
         if(aa&&dd){
           const mins=Math.max(0,Math.round((dd-aa)/60000));
           stand=mins>=60
@@ -6782,13 +6778,24 @@ function renderCurrentSchedule(){
         }
       }
 
+      let segment='';
+      if(i<x.stops.length-1){
+        const next=x.stops[i+1];
+        const a=scheduleZonedDate(x.date,st.departure,x.timezone||'Europe/Moscow',Number(st.dayOffset)||0);
+        const b=scheduleZonedDate(x.date,next.arrival,x.timezone||'Europe/Moscow',Number(next.dayOffset)||0);
+        if(a&&b){
+          const mins=Math.max(0,Math.round((b-a)/60000));
+          const travel=mins>=60?Math.floor(mins/60)+' ч'+(mins%60?' '+mins%60+' мин':''):mins+' мин';
+          segment='<div class="schedule-segment">Перегон <b>'+escapeHtml(travel)+'</b></div>';
+        }
+      }
       return dayHeading+
-        '<div class="schedule-stop" data-stop-index="'+i+'">'+
+        '<div class="schedule-stop future" data-stop-index="'+i+'">'+
           '<div>'+escapeHtml(st.name)+'</div>'+
           '<div class="mono">'+escapeHtml(st.arrival||'—')+'</div>'+
           '<div class="mono">'+escapeHtml(stand||'—')+'</div>'+
           '<div class="mono">'+escapeHtml(st.departure||'—')+'</div>'+
-        '</div>';
+        '</div>'+segment;
     }).join('');
 
     scheduleStops.innerHTML=
