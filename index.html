@@ -1095,6 +1095,9 @@
   .schedule-stop:last-child{border-bottom:0;}
   .schedule-stop.current{background:var(--surface-2);color:var(--amber);}
   .schedule-stop-head{color:var(--ink-muted);font-size:10px;text-transform:uppercase;}
+  .schedule-next{background:var(--surface-2);border:1px solid var(--amber-dim);border-radius:8px;padding:9px 12px;margin-bottom:10px;font-size:13px;}
+  .schedule-next b{color:var(--amber);font-family:ui-monospace,monospace;}
+  .schedule-stop.technical{color:var(--ink-muted);}
   .schedule-saved{display:flex;flex-direction:column;gap:7px;margin-bottom:12px;}
   .schedule-card{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:10px;}
   .schedule-card-main{flex:1;min-width:0;cursor:pointer;}
@@ -1558,13 +1561,14 @@
     <div class="schedule-actions">
       <!--button id="scheduleApiSearchBtn" class="primary">🔎 Найти поезда</button-->
       <button id="openYandexScheduleBtn">Открыть поиск Яндекс</button>
-      <button id="parseYandexLinkBtn">Разобрать ссылку Яндекс</button>
+      <button id="parseYandexLinkBtn">Загрузить расписание</button>
       <!--button id="scheduleApiKeyBtn">🔑 API-ключ</button-->
     </div>
     <input id="yandexScheduleLink" class="schedule-link" placeholder="Вставьте ссылку поиска или выбранного поезда Яндекс Расписаний">
     <div class="schedule-help">
-      После выбора поезда в Яндексе скопируйте ссылку на поезд и вставьте её сюда.
-      Приложение сохранит номер, направление, дату и время. Сохранённые данные доступны без интернета.
+      Скопируйте ссылку на страницу конкретного поезда (rasp.yandex.ru/thread/...) и вставьте её сюда.
+      Приложение скачает полный список остановок с временем прибытия/отправления и сохранит офлайн.
+      Если скачать не удалось (нет сети или Яндекс заблокировал запрос), сохранятся хотя бы номер поезда и дата из самой ссылки.
     </div>
   </div>
 
@@ -6131,7 +6135,7 @@ function saveNotes(){
 
 function renderNotesView(){
   if(!notes.length){
-    notesListEl.innerHTML='<div class="modal-hint" style="padding:10px;">Заметок пока нет.</div>';
+    notesList.innerHTML='<div class="modal-hint" style="padding:10px;">Заметок пока нет.</div>';
     noteTitle.value='';
     noteText.value='';
     currentNoteId=null;
@@ -6142,7 +6146,7 @@ function renderNotesView(){
     currentNoteId=notes[0].id;
   }
 
-  notesListEl.innerHTML=notes.map(n=>`
+  notesList.innerHTML=notes.map(n=>`
     <div class="note-list-row">
       <button class="note-list-btn ${n.id===currentNoteId?'active':''}" data-note-id="${escapeAttr(n.id)}">
         ${escapeHtml(n.title||'Без названия')}
@@ -6155,14 +6159,14 @@ function renderNotesView(){
   noteTitle.value=current?.title||'';
   noteText.value=current?.text||'';
 
-  notesListEl.querySelectorAll('[data-note-id]').forEach(btn=>{
+  notesList.querySelectorAll('[data-note-id]').forEach(btn=>{
     btn.addEventListener('click',()=>{
       currentNoteId=btn.dataset.noteId;
       renderNotesView();
     });
   });
 
-  notesListEl.querySelectorAll('[data-note-delete]').forEach(btn=>{
+  notesList.querySelectorAll('[data-note-delete]').forEach(btn=>{
     btn.addEventListener('click',()=>{
       const n=notes.find(x=>x.id===btn.dataset.noteDelete);
       if(!n)return;
@@ -6444,6 +6448,46 @@ function scheduleStopDate(stop,baseDate,timezone){
   return scheduleZonedDate(baseDate,stop.time,timezone||'Europe/Moscow');
 }
 
+function isIsoDt(v){
+  return typeof v==='string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(v);
+}
+
+function stopArrivalDate(st,x){
+  if(!st || !st.arrival)return null;
+  if(isIsoDt(st.arrival))return new Date(st.arrival);
+  return scheduleZonedDate(x.date,st.arrival,x.timezone||'Europe/Moscow');
+}
+
+function stopDepartureDate(st,x){
+  if(!st || !st.departure)return null;
+  if(isIsoDt(st.departure))return new Date(st.departure);
+  return scheduleZonedDate(x.date,st.departure,x.timezone||'Europe/Moscow');
+}
+
+function formatStopClock(v){
+  if(!v)return '—';
+  const m=String(v).match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}:\d{2})/);
+  return m ? m[3]+'.'+m[2]+' '+m[4] : String(v);
+}
+
+function findScheduleProgress(x,now){
+  const stops=x.stops||[];
+  let atIndex=-1, nextIndex=-1;
+  for(let i=0;i<stops.length;i++){
+    const a=stopArrivalDate(stops[i],x), d=stopDepartureDate(stops[i],x);
+    if(a && d && now>=a && now<d){ atIndex=i; break; }
+  }
+  if(atIndex>=0){
+    nextIndex = atIndex+1<stops.length ? atIndex+1 : -1;
+  }else{
+    for(let i=0;i<stops.length;i++){
+      const t=stopArrivalDate(stops[i],x)||stopDepartureDate(stops[i],x);
+      if(t && t>now){ nextIndex=i; break; }
+    }
+  }
+  return {atIndex,nextIndex};
+}
+
 function renderCurrentSchedule(){
   const x=schedules.find(s=>s.id===currentScheduleId)||schedules[0];
   if(!x){
@@ -6457,6 +6501,7 @@ function renderCurrentSchedule(){
   scheduleCurrent.innerHTML=`
     <h3>${escapeHtml(x.trainNumber?'Поезд '+x.trainNumber:'Сохранённый поезд')}</h3>
     <div class="schedule-route">${escapeHtml(x.fromName||'—')} → ${escapeHtml(x.toName||'—')} · ${escapeHtml(x.date||'')}</div>
+    <div id="scheduleNextLine" class="schedule-next" hidden></div>
     <div class="schedule-timers">
       <div class="schedule-timer"><span>Сейчас</span><b id="scheduleNowTimer">—</b></div>
       <div class="schedule-timer"><span>До отправления</span><b id="scheduleDepartureTimer">—</b></div>
@@ -6486,13 +6531,15 @@ function renderCurrentSchedule(){
     state.schedules=schedules;saveState();renderScheduleView();
   });
 
-  const dep=x.departure?scheduleZonedDate(x.date,x.departure,x.timezone||'Europe/Moscow'):null;
-  const arr=x.arrival?scheduleZonedDate(x.date,x.arrival,x.timezone||'Europe/Moscow'):null;
-  const now=new Date();
+  const firstStop=x.stops?.[0]||null;
+  const lastStop=x.stops?.length?x.stops[x.stops.length-1]:null;
+  const dep=(firstStop&&stopDepartureDate(firstStop,x))||(x.departure?scheduleZonedDate(x.date,x.departure,x.timezone||'Europe/Moscow'):null);
+  const arr=(lastStop&&stopArrivalDate(lastStop,x))||(x.arrival?scheduleZonedDate(x.date,x.arrival,x.timezone||'Europe/Moscow'):null);
   const nowEl=document.getElementById('scheduleNowTimer');
   const depEl=document.getElementById('scheduleDepartureTimer');
   const arrEl=document.getElementById('scheduleArrivalTimer');
   const stopEl=document.getElementById('scheduleStopTimer');
+  const nextEl=document.getElementById('scheduleNextLine');
 
   const update=()=>{
     const now2=new Date();
@@ -6507,21 +6554,30 @@ function renderCurrentSchedule(){
     stopEl.textContent='—';
 
     if(x.stops?.length){
-      const base=x.date||new Date().toISOString().slice(0,10);
-      let current=-1;
-      x.stops.forEach((st,i)=>{
-        const d=st.arrival?scheduleStopDate(st,base,x.timezone):null;
-        const dd=st.departure?scheduleStopDate({time:st.departure},base,x.timezone):null;
-        if(d && dd && now2>=d && now2<dd){
-          current=i;
-          stopEl.textContent=formatDuration(dd-now2);
-        }else if(d && now2>=d && (!dd || now2<dd)){
-          current=i;
-        }
-      });
+      const {atIndex,nextIndex}=findScheduleProgress(x,now2);
+
+      if(atIndex>=0){
+        const d2=stopDepartureDate(x.stops[atIndex],x);
+        stopEl.textContent=d2?formatDuration(d2-now2):'—';
+      }
+
+      if(nextIndex>=0){
+        const ns=x.stops[nextIndex];
+        const eta=stopArrivalDate(ns,x)||stopDepartureDate(ns,x);
+        nextEl.hidden=false;
+        nextEl.innerHTML='Следующая остановка: <b>'+escapeHtml(ns.name)+'</b> · через <b>'+(eta?formatDuration(eta-now2):'—')+'</b>';
+      }else if(atIndex>=0 && atIndex===x.stops.length-1){
+        nextEl.hidden=false;
+        nextEl.innerHTML='Конечная остановка';
+      }else{
+        nextEl.hidden=true;
+      }
+
       scheduleStops.querySelectorAll('[data-stop-index]').forEach(el=>{
-        el.classList.toggle('current',Number(el.dataset.stopIndex)===current);
+        el.classList.toggle('current',Number(el.dataset.stopIndex)===atIndex);
       });
+    }else{
+      nextEl.hidden=true;
     }
   };
   update();
@@ -6533,10 +6589,9 @@ function renderCurrentSchedule(){
     scheduleStops.innerHTML=
       '<div class="schedule-stop schedule-stop-head"><div>Остановка</div><div>Прибытие</div><div>Отправление</div><div>Стоянка</div></div>'+
       x.stops.map((st,i)=>{
-        const a=st.arrival?scheduleZonedDate(x.date,st.arrival,x.timezone||'Europe/Moscow'):null;
-        const d=st.departure?scheduleZonedDate(x.date,st.departure,x.timezone||'Europe/Moscow'):null;
+        const a=stopArrivalDate(st,x), d=stopDepartureDate(st,x);
         const stand=a&&d?formatDuration(d-a):'—';
-        return '<div class="schedule-stop" data-stop-index="'+i+'"><div>'+escapeHtml(st.name)+'</div><div class="mono">'+escapeHtml(st.arrival||'—')+'</div><div class="mono">'+escapeHtml(st.departure||'—')+'</div><div class="mono">'+stand+'</div></div>';
+        return '<div class="schedule-stop'+(st.isTechnical?' technical':'')+'" data-stop-index="'+i+'"><div>'+escapeHtml(st.name)+'</div><div class="mono">'+escapeHtml(formatStopClock(st.arrival))+'</div><div class="mono">'+escapeHtml(formatStopClock(st.departure))+'</div><div class="mono">'+stand+'</div></div>';
       }).join('');
   }else{
     scheduleStops.hidden=true;
@@ -6706,6 +6761,137 @@ function parseYandexAndSave(){
   showToast('Поезд сохранён. Он доступен офлайн');
 }
 
+/* ---- Разбор страницы поезда rasp.yandex.ru: полное расписание остановок ---- */
+
+// Вытаскивает JSON из "window.INITIAL_STATE = {...};" без хрупкого regex —
+// считаем баланс скобок с учётом строк/экранирования.
+function extractYandexInitialState(html){
+  const idx=html.indexOf('INITIAL_STATE');
+  if(idx<0)return null;
+  const eq=html.indexOf('=',idx);
+  const start=html.indexOf('{',eq);
+  if(eq<0||start<0)return null;
+  let depth=0,inStr=false,strCh='',esc=false;
+  for(let j=start;j<html.length;j++){
+    const c=html[j];
+    if(inStr){
+      if(esc)esc=false;
+      else if(c==='\\')esc=true;
+      else if(c===strCh)inStr=false;
+      continue;
+    }
+    if(c==='"'||c==="'"){inStr=true;strCh=c;continue;}
+    if(c==='{')depth++;
+    else if(c==='}'){
+      depth--;
+      if(depth===0){
+        try{return JSON.parse(html.slice(start,j+1));}catch(e){return null;}
+      }
+    }
+  }
+  return null;
+}
+
+// thread.stations[] -> плоский список остановок с ISO-временем (в нём уже
+// зашит локальный часовой пояс станции, поэтому доп. пересчёт не нужен).
+function mapYandexThreadToStops(thread){
+  const stations=Array.isArray(thread?.stations)?thread.stations:[];
+  return stations.filter(s=>!s.hidden).map(s=>({
+    name:s.title||'',
+    arrival:s.arrivalLocalDt||'',
+    departure:s.departureLocalDt||'',
+    isTechnical:!!s.isTechnicalStop,
+    isFrom:!!s.isStationFrom,
+    isTo:!!s.isStationTo
+  }));
+}
+
+// Яндекс не отдаёт CORS-заголовки для чужих доменов, поэтому пробуем
+// прямой запрос (вдруг сработает), затем пару публичных CORS-прокси.
+const YANDEX_CORS_PROXIES=[
+  u=>u,
+  u=>'https://corsproxy.io/?url='+encodeURIComponent(u),
+  u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u)
+];
+
+async function fetchYandexHtml(url){
+  let lastErr=null;
+  for(const wrap of YANDEX_CORS_PROXIES){
+    try{
+      const res=await fetch(wrap(url));
+      if(!res.ok)throw new Error('HTTP '+res.status);
+      const text=await res.text();
+      if(text && text.indexOf('INITIAL_STATE')>=0)return text;
+      throw new Error('нет INITIAL_STATE в ответе');
+    }catch(e){lastErr=e;}
+  }
+  throw lastErr||new Error('не удалось загрузить страницу');
+}
+
+async function importYandexThread(rawUrl){
+  const url=String(rawUrl||'').trim();
+  if(!/rasp\.yandex\.(ru|com)\/thread\//i.test(url)){
+    showToast('Нужна ссылка на страницу конкретного поезда (rasp.yandex.ru/thread/...)');
+    return;
+  }
+  const parsed=parseYandexUrl(url);
+  showToast('Загружаем расписание с Яндекса…');
+
+  try{
+    const html=await fetchYandexHtml(url);
+    const state=extractYandexInitialState(html);
+    const thread=state&&state.thread;
+    if(!thread || !Array.isArray(thread.stations) || !thread.stations.length){
+      throw new Error('пустой маршрут в ответе');
+    }
+
+    const stops=mapYandexThreadToStops(thread);
+    const first=stops.find(s=>s.isFrom)||stops[0];
+    const last=[...stops].reverse().find(s=>s.isTo)||stops[stops.length-1];
+    const uidVal=thread.canonicalUid||parsed?.uid||'';
+    const existing=uidVal?schedules.find(s=>s.uid===uidVal):null;
+
+    const saved=saveSchedule({
+      id:existing?.id,
+      uid:uidVal,
+      trainNumber:thread.number||parsed?.trainNumber||'',
+      fromId:parsed?.fromId||'',
+      toId:parsed?.toId||'',
+      fromName:first?.name||parsed?.fromName||'',
+      toName:last?.name||parsed?.toName||'',
+      date:(first?.departure||'').slice(0,10)||parsed?.date||'',
+      timezone:scheduleTimezone.value||'Europe/Moscow',
+      departure:first?.departure||'',
+      arrival:last?.arrival||'',
+      stops,
+      sourceUrl:url
+    });
+
+    scheduleFrom.value=saved.fromName;
+    scheduleTo.value=saved.toName;
+    if(saved.date)scheduleDate.value=saved.date;
+    yandexScheduleLink.value=saved.sourceUrl;
+    renderScheduleView();
+    showToast('Расписание загружено: остановок — '+stops.length);
+  }catch(e){
+    console.error('importYandexThread failed:',e);
+    if(parsed){
+      const existing=parsed.uid?schedules.find(s=>s.uid===parsed.uid):null;
+      parsed.id=existing?.id;
+      parsed.timezone=scheduleTimezone.value||'Europe/Moscow';
+      const saved=saveSchedule(parsed);
+      scheduleFrom.value=saved.fromName||scheduleFrom.value;
+      scheduleTo.value=saved.toName||scheduleTo.value;
+      scheduleDate.value=saved.date||scheduleDate.value;
+      yandexScheduleLink.value=saved.sourceUrl||yandexScheduleLink.value;
+      renderScheduleView();
+      showToast('Не удалось скачать остановки — сохранены только номер поезда и дата');
+    }else{
+      showToast('Не удалось разобрать ссылку Яндекс');
+    }
+  }
+}
+
 //document.getElementById('scheduleApiSearchBtn').addEventListener('click',searchYandexApi);
 /*document.getElementById('scheduleApiKeyBtn').addEventListener('click',async()=>{
   scheduleApiKey='';
@@ -6715,7 +6901,9 @@ function parseYandexAndSave(){
 document.getElementById('openYandexScheduleBtn').addEventListener('click',()=>{
   window.open(buildYandexSearchUrl(),'_blank');
 });
-document.getElementById('parseYandexLinkBtn').addEventListener('click',parseYandexAndSave);
+document.getElementById('parseYandexLinkBtn').addEventListener('click',()=>{
+  importYandexThread(yandexScheduleLink.value);
+});
 
 
 /* =========================================================
