@@ -5777,7 +5777,7 @@ function agentReportDataMatrix(){
     matrix.push([]);
   });
 
-  matrix.push(['ИТОГО','','',totals.opening,totals.openingSum,totals.received,totals.receivedSum,totals.sold,totals.soldSum,totals.remaining,totals.remainingSum]);
+  matrix.push(['ИТОГО','',totals.opening,totals.openingSum,totals.received,totals.receivedSum,totals.sold,totals.soldSum,totals.remaining,totals.remainingSum]);
   return matrix;
 }
 
@@ -5814,7 +5814,7 @@ function downloadAgentReportXls(){
   downloadBlob(
     'otchet-agenta-'+(agentReport.date||new Date().toISOString().slice(0,10))+'.xls',
     'application/vnd.ms-excel;charset=utf-8',
-    '\\ufeff'+doc
+    '\ufeff'+doc
   );
   showToast('Excel .xls подготовлен');
 }
