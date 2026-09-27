@@ -1556,8 +1556,10 @@
     </div>
     <datalist id="scheduleCities"></datalist>
     <div class="schedule-actions">
-      <button id="openYandexScheduleBtn" class="primary">Открыть поиск Яндекс</button>
+      <button id="scheduleApiSearchBtn" class="primary">🔎 Найти поезда</button>
+      <button id="openYandexScheduleBtn">Открыть поиск Яндекс</button>
       <button id="parseYandexLinkBtn">Разобрать ссылку Яндекс</button>
+      <button id="scheduleApiKeyBtn">🔑 API-ключ</button>
     </div>
     <input id="yandexScheduleLink" class="schedule-link" placeholder="Вставьте ссылку поиска или выбранного поезда Яндекс Расписаний">
     <div class="schedule-help">
@@ -1566,6 +1568,7 @@
     </div>
   </div>
 
+  <div id="scheduleApiResults" class="schedule-saved" hidden></div>
   <div id="scheduleCurrent" class="schedule-current" hidden></div>
 
   <div class="schedule-saved">
@@ -2244,6 +2247,7 @@ let notes = Array.isArray(state.notes) ? state.notes : [];
 let schedules = Array.isArray(state.schedules) ? state.schedules : [];
 let currentNoteId = null;
 let currentScheduleId = null;
+let scheduleApiKey = '';
 
 let currentWagonId = state.currentWagonId;
 
@@ -6535,6 +6539,147 @@ function baseDateTime(date,time){
   return d+'T'+time+':00';
 }
 
+async function getScheduleApiKey(){
+  if(scheduleApiKey)return scheduleApiKey;
+  const key=prompt(
+    'Введите API-ключ Яндекс Расписаний.\\n\\nКлюч используется только в текущем сеансе и не попадает в резервную копию.'
+  );
+  if(!key)return '';
+  scheduleApiKey=key.trim();
+  return scheduleApiKey;
+}
+
+function renderScheduleApiResults(items){
+  scheduleApiResults.hidden=!items.length;
+  if(!items.length)return;
+  scheduleApiResults.innerHTML=
+    '<div class="sidebar-section-title">Найденные поезда</div>'+
+    items.map((x,i)=>{
+      const dep=x.departure?new Date(x.departure).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}):'—';
+      const arr=x.arrival?new Date(x.arrival).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}):'—';
+      const duration=x.duration?formatDuration(Number(x.duration)*1000):'—';
+      return `
+        <div class="schedule-card">
+          <div class="schedule-card-main">
+            <div class="schedule-card-title">Поезд ${escapeHtml(x.number||'—')} · ${dep} → ${arr}</div>
+            <div class="schedule-card-route">${escapeHtml(x.title||'')} · ${duration}</div>
+          </div>
+          <button data-api-train="${i}">Выбрать</button>
+        </div>`;
+    }).join('');
+
+  scheduleApiResults.querySelectorAll('[data-api-train]').forEach(btn=>{
+    btn.addEventListener('click',()=>selectApiTrain(items[Number(btn.dataset.apiTrain)]));
+  });
+}
+
+async function searchYandexApi(){
+  const key=await getScheduleApiKey();
+  if(!key)return;
+
+  const from=scheduleCityCode(scheduleFrom.value);
+  const to=scheduleCityCode(scheduleTo.value);
+  const date=scheduleDate.value;
+
+  if(!from || !to || !date){
+    showToast('Укажите города и дату');
+    return;
+  }
+
+  scheduleApiResults.hidden=false;
+  scheduleApiResults.innerHTML='<div class="modal-hint">Ищем поезда…</div>';
+
+  try{
+    const p=new URLSearchParams({
+      apikey:key,
+      format:'json',
+      lang:'ru_RU',
+      from,
+      to,
+      date,
+      transport_types:'train',
+      limit:'100'
+    });
+    const response=await fetch('https://api.rasp.yandex-net.ru/v3.0/search/?'+p.toString());
+    if(!response.ok)throw new Error('HTTP '+response.status);
+    const data=await response.json();
+    const segments=Array.isArray(data.segments)?data.segments:[];
+    const items=segments.map(seg=>({
+      uid:seg.thread?.uid||'',
+      number:seg.thread?.number||'',
+      title:seg.thread?.title||seg.thread?.short_title||'',
+      departure:seg.departure||'',
+      arrival:seg.arrival||'',
+      duration:seg.duration||0,
+      fromId:seg.from?.code||from,
+      toId:seg.to?.code||to,
+      fromName:seg.from?.title||scheduleFrom.value,
+      toName:seg.to?.title||scheduleTo.value
+    })).filter(x=>x.uid);
+
+    renderScheduleApiResults(items);
+    showToast(items.length?'Найдено поездов: '+items.length:'Поездов не найдено');
+  }catch(e){
+    scheduleApiResults.innerHTML='<div class="modal-hint">Не удалось получить данные Яндекс Расписаний. Проверьте API-ключ и интернет-соединение.</div>';
+  }
+}
+
+async function selectApiTrain(item){
+  const key=await getScheduleApiKey();
+  if(!key || !item?.uid)return;
+
+  try{
+    const p=new URLSearchParams({
+      apikey:key,
+      format:'json',
+      lang:'ru_RU',
+      uid:item.uid,
+      date:scheduleDate.value,
+      show_systems:'all'
+    });
+    if(item.fromId)p.set('from',item.fromId);
+    if(item.toId)p.set('to',item.toId);
+
+    const response=await fetch('https://api.rasp.yandex-net.ru/v3.0/thread/?'+p.toString());
+    if(!response.ok)throw new Error('HTTP '+response.status);
+    const data=await response.json();
+
+    const stops=(Array.isArray(data.stops)?data.stops:[]).map(st=>{
+      const a=st.arrival||'';
+      const d=st.departure||'';
+      return {
+        name:st.station?.title||st.station?.popular_title||st.station?.short_title||'',
+        arrival:a,
+        departure:d,
+        stopTime:st.stop_time
+      };
+    }).filter(st=>st.name);
+
+    const saved=saveSchedule({
+      uid:data.uid||item.uid,
+      trainNumber:data.number||item.number,
+      fromId:item.fromId,
+      toId:item.toId,
+      fromName:item.fromName||scheduleFrom.value,
+      toName:item.toName||scheduleTo.value,
+      date:scheduleDate.value,
+      timezone:scheduleTimezone.value||'Europe/Moscow',
+      departure:item.departure,
+      arrival:item.arrival,
+      stops,
+      sourceUrl:buildYandexSearchUrl()
+    });
+
+    scheduleFrom.value=saved.fromName;
+    scheduleTo.value=saved.toName;
+    scheduleApiResults.hidden=true;
+    renderScheduleView();
+    showToast('Поезд и маршрут сохранены офлайн');
+  }catch(e){
+    showToast('Не удалось загрузить маршрут поезда');
+  }
+}
+
 function parseYandexAndSave(){
   const parsed=parseYandexUrl(yandexScheduleLink.value);
   if(!parsed){
@@ -6552,6 +6697,12 @@ function parseYandexAndSave(){
   showToast('Поезд сохранён. Он доступен офлайн');
 }
 
+document.getElementById('scheduleApiSearchBtn').addEventListener('click',searchYandexApi);
+document.getElementById('scheduleApiKeyBtn').addEventListener('click',async()=>{
+  scheduleApiKey='';
+  await getScheduleApiKey();
+  showToast(scheduleApiKey?'API-ключ принят':'API-ключ не задан');
+});
 document.getElementById('openYandexScheduleBtn').addEventListener('click',()=>{
   window.open(buildYandexSearchUrl(),'_blank');
 });
