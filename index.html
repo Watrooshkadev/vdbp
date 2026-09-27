@@ -8363,7 +8363,7 @@ if('serviceWorker' in navigator){
 
   function updateStatus(){
     const old=document.getElementById('topbarScheduleStatus');if(old)old.remove();
-    const list=Array.isArray(window.schedules)?window.schedules:[],x=list.find(s=>s.id===window.currentScheduleId)||list[0];if(!x)return;
+    const list=Array.isArray(schedules)?schedules:[],x=list.find(s=>s.id===currentScheduleId)||list[0];if(!x)return;
     const live=liveStatus(x,new Date());if(!live)return;
     const el=document.createElement('span');el.id='topbarScheduleStatus';el.className='schedule-top-status '+live.type;el.title=live.sub||live.title;
     el.innerHTML='<span>'+live.icon+'</span><b>'+live.title+(live.sub?' · '+live.sub:'')+'</b>';
@@ -8371,7 +8371,7 @@ if('serviceWorker' in navigator){
   }
 
   function addButtons(){
-    const list=Array.isArray(window.schedules)?window.schedules:[],x=list.find(s=>s.id===window.currentScheduleId)||list[0];if(!x||!Array.isArray(x.stops))return;
+    const list=Array.isArray(schedules)?schedules:[],x=list.find(s=>s.id===currentScheduleId)||list[0];if(!x||!Array.isArray(x.stops))return;
     document.querySelectorAll('#scheduleStops .schedule-stop[data-stop-index]').forEach(row=>{
       const i=Number(row.dataset.stopIndex),st=x.stops[i];if(!st||!st.arrival||row.querySelector('.schedule-notify'))return;
       const name=row.children[0];if(!name)return;const wrap=document.createElement('div');wrap.className='schedule-notify';
@@ -8380,14 +8380,14 @@ if('serviceWorker' in navigator){
   }
 
   function toggle(btn){
-    const list=Array.isArray(window.schedules)?window.schedules:[],x=list.find(s=>s.id===window.currentScheduleId)||list[0];if(!x)return;
+    const list=Array.isArray(schedules)?schedules:[],x=list.find(s=>s.id===currentScheduleId)||list[0];if(!x)return;
     const i=Number(btn.dataset.scheduleNotify),m=Number(btn.dataset.notifyMinutes),p=prefs(),k=key(x.id,i,m);if(p[k])delete p[k];else p[k]=true;savePrefs(p);btn.classList.toggle('active',!!p[k]);btn.setAttribute('aria-pressed',p[k]?'true':'false');
     if(typeof showToast==='function')showToast(p[k]?'Напомним за '+m+' мин до '+x.stops[i].name:'Уведомление за '+m+' мин отключено');
     if(p[k]&&'Notification'in window&&Notification.permission==='default')Notification.requestPermission().catch(()=>{});
   }
 
   function check(){
-    const now=Date.now(),list=Array.isArray(window.schedules)?window.schedules:[];
+    const now=Date.now(),list=Array.isArray(schedules)?schedules:[];
     list.forEach(x=>(x.stops||[]).forEach((st,i)=>{if(!st.arrival)return;[30,15,5].forEach(m=>{if(!enabled(x.id,i,m))return;const a=scheduleZonedDate(x.date,st.arrival,x.timezone||'Europe/Moscow',Number(st.dayOffset)||0,Number(st.timezoneOffsetMinutes)||0);if(!a)return;const diff=a.getTime()-now,fa=m*60000,k=key(x.id,i,m)+'|'+a.getTime();if(diff<=fa&&diff>fa-60000&&!fired.has(k)){fired.add(k);const title='🚆 Мы подъезжаем к станции',body=st.name+' · через '+m+' мин';if('Notification'in window&&Notification.permission==='granted')try{new Notification(title,{body,tag:k})}catch(e){}if(typeof showToast==='function')showToast(title+': '+body)}})}));
   }
 
