@@ -1556,7 +1556,7 @@
     </div>
     <datalist id="scheduleCities"></datalist>
     <div class="schedule-actions">
-      <!--button id="scheduleApiSearchBtn" class="primary">🔎 Найти поезда</button-->
+      <button id="scheduleApiSearchBtn" class="primary">🔎 Найти поезда</button>
       <button id="openYandexScheduleBtn">Открыть поиск Яндекс</button>
       <button id="parseYandexLinkBtn">Разобрать ссылку Яндекс</button>
       <!--button id="scheduleApiKeyBtn">🔑 API-ключ</button-->
@@ -2286,6 +2286,24 @@ const summaryView = document.getElementById('summaryView');
 const catalogView = document.getElementById('catalogView');
 const transfersView = document.getElementById('transfersView');
 const agentReportView = document.getElementById('agentReportView');
+const notesView = document.getElementById('notesView');
+const notesListEl = document.getElementById('notesList');
+const noteTitle = document.getElementById('noteTitle');
+const noteText = document.getElementById('noteText');
+
+const scheduleView = document.getElementById('scheduleView');
+const scheduleFrom = document.getElementById('scheduleFrom');
+const scheduleTo = document.getElementById('scheduleTo');
+const scheduleDate = document.getElementById('scheduleDate');
+const scheduleTimezone = document.getElementById('scheduleTimezone');
+const scheduleCities = document.getElementById('scheduleCities');
+const scheduleApiResults = document.getElementById('scheduleApiResults');
+const scheduleCurrent = document.getElementById('scheduleCurrent');
+const scheduleSavedList = document.getElementById('scheduleSavedList');
+const scheduleStops = document.getElementById('scheduleStops');
+const yandexScheduleLink = document.getElementById('yandexScheduleLink');
+const scheduleApiSearchBtn = document.getElementById('scheduleApiSearchBtn');
+
 const agentReportBody = document.getElementById('agentReportBody');
 const agentReportFoot = document.getElementById('agentReportFoot');
 const agentReportTitle = document.getElementById('agentReportTitle');
@@ -6269,50 +6287,67 @@ function formatDuration(ms){
 
 function parseYandexUrl(raw){
   try{
-    const u=new URL(raw.trim());
+    const u=new URL(String(raw||'').trim());
     if(!/yandex\.(ru|com)/i.test(u.hostname) || !/rasp/i.test(u.hostname+u.pathname)) return null;
+
     const q=u.searchParams;
     const out={
       sourceUrl:u.href,
-      uid:'',
-      fromId:q.get('fromId')||q.get('station_from')||'',
-      toId:q.get('toId')||q.get('station_to')||'',
-      fromName:q.get('fromName')||'',
-      toName:q.get('toName')||'',
-      date:'',
-      departure:'',
-      arrival:'',
-      trainNumber:'',
+      uid:q.get('uid')||q.get('thread')||q.get('threadId')||'',
+      fromId:q.get('fromId')||q.get('station_from')||q.get('from')||'',
+      toId:q.get('toId')||q.get('station_to')||q.get('to')||'',
+      fromName:q.get('fromName')||q.get('fromTitle')||'',
+      toName:q.get('toName')||q.get('toTitle')||'',
+      date:q.get('date')||'',
+      departure:q.get('departure_from')||q.get('departure')||'',
+      arrival:q.get('arrival_to')||q.get('arrival')||'',
+      trainNumber:q.get('trainNumber')||q.get('number')||'',
       stops:[]
     };
 
     const when=q.get('when')||'';
-    if(when){
+    const months={
+      'января':0,'февраля':1,'марта':2,'апреля':3,'мая':4,'июня':5,
+      'июля':6,'августа':7,'сентября':8,'октября':9,'ноября':10,'декабря':11
+    };
+    if(!out.date && when){
       const dm=when.match(/(\d{1,2})\s+([^,\d]+?)(?:\s+(\d{4}))?$/i);
       if(dm){
-        const months={
-          'января':0,'февраля':1,'марта':2,'апреля':3,'мая':4,'июня':5,
-          'июля':6,'августа':7,'сентября':8,'октября':9,'ноября':10,'декабря':11
-        };
         const month=months[String(dm[2]).trim().toLowerCase()];
         if(month!==undefined){
           const year=Number(dm[3])||new Date().getFullYear();
-          out.date=new Date(year,month,Number(dm[1])).toISOString().slice(0,10);
+          const d=new Date(year,month,Number(dm[1]));
+          out.date=d.toISOString().slice(0,10);
         }
       }
     }
 
-    const dep=q.get('departure_from');
+    const dep=decodeURIComponent(out.departure||'');
     if(dep){
-      out.departure=decodeURIComponent(dep).replace(' ','T').replace(' ','T');
-      if(!out.date && /^\d{4}-\d{2}-\d{2}/.test(out.departure))out.date=out.departure.slice(0,10);
+      out.departure=dep.replace(' ','T');
+      if(!out.date && /^\d{4}-\d{2}-\d{2}/.test(dep))out.date=dep.slice(0,10);
     }
 
-    const m=u.pathname.match(/\/thread\/([^/]+)/i);
-    if(m){
-      out.uid=decodeURIComponent(m[1]);
+    // Yandex has used several URL layouts for a selected train.
+    // Try pathname, hash and query before giving up.
+    const candidates=[
+      u.pathname,
+      decodeURIComponent(u.hash||''),
+      q.get('url')||'',
+      q.get('threadUrl')||''
+    ].join(' ');
+
+    const threadMatch=candidates.match(/(?:^|[/?#])thread\/([^/?#&]+)/i);
+    if(!out.uid && threadMatch)out.uid=decodeURIComponent(threadMatch[1]);
+
+    if(!out.uid){
+      const loose=candidates.match(/(?:uid|thread(?:Id)?)=([^&#\s]+)/i);
+      if(loose)out.uid=decodeURIComponent(loose[1]);
+    }
+
+    if(out.uid){
       const part=out.uid.match(/^R_(.+?)_/i);
-      if(part)out.trainNumber=part[1];
+      if(part && !out.trainNumber)out.trainNumber=part[1];
     }
 
     if(out.fromId && /^\d+$/.test(out.fromId))out.fromId='s'+out.fromId;
@@ -6322,7 +6357,9 @@ function parseYandexUrl(raw){
     if(!out.toName && out.toId==='s9613022')out.toName='Новороссийск';
 
     return out;
-  }catch(e){return null;}
+  }catch(e){
+    return null;
+  }
 }
 
 function buildYandexSearchUrl(){
@@ -6689,13 +6726,58 @@ async function selectApiTrain(item){
   }
 }
 
-function parseYandexAndSave(){
+async function parseYandexAndSave(){
   const parsed=parseYandexUrl(yandexScheduleLink.value);
   if(!parsed){
     showToast('Не удалось распознать ссылку Яндекс');
     return;
   }
+
   parsed.timezone=scheduleTimezone.value||'Europe/Moscow';
+
+  // A Yandex URL does not contain the complete list of stops.
+  // If it contains a thread UID, use the official API to load the route.
+  if(parsed.uid){
+    const key=await getScheduleApiKey();
+    if(key){
+      try{
+        const p=new URLSearchParams({
+          apikey:key,
+          format:'json',
+          lang:'ru_RU',
+          uid:parsed.uid,
+          date:parsed.date||scheduleDate.value,
+          show_systems:'all'
+        });
+        if(parsed.fromId)p.set('from',parsed.fromId);
+        if(parsed.toId)p.set('to',parsed.toId);
+
+        const response=await fetch('https://api.rasp.yandex-net.ru/v3.0/thread/?'+p.toString());
+        if(!response.ok)throw new Error('HTTP '+response.status);
+        const data=await response.json();
+
+        parsed.uid=data.uid||parsed.uid;
+        parsed.trainNumber=data.number||parsed.trainNumber;
+        parsed.departure=data.departure||parsed.departure;
+        parsed.arrival=data.arrival||parsed.arrival;
+        parsed.fromId=data.from?.code||parsed.fromId;
+        parsed.toId=data.to?.code||parsed.toId;
+        parsed.fromName=data.from?.title||data.from?.popular_title||parsed.fromName;
+        parsed.toName=data.to?.title||data.to?.popular_title||parsed.toName;
+        parsed.date=parsed.date||scheduleDate.value;
+
+        parsed.stops=(Array.isArray(data.stops)?data.stops:[]).map(st=>({
+          name:st.station?.title||st.station?.popular_title||st.station?.short_title||'',
+          arrival:st.arrival||'',
+          departure:st.departure||'',
+          stopTime:st.stop_time
+        })).filter(st=>st.name);
+      }catch(e){
+        showToast('Ссылка распознана, но маршрут не загрузился. Проверьте API-ключ.');
+      }
+    }
+  }
+
   const saved=saveSchedule(parsed);
   scheduleFrom.value=saved.fromName||scheduleFrom.value;
   scheduleTo.value=saved.toName||scheduleTo.value;
@@ -6703,15 +6785,16 @@ function parseYandexAndSave(){
   scheduleTimezone.value=saved.timezone||'Europe/Moscow';
   yandexScheduleLink.value=saved.sourceUrl||yandexScheduleLink.value;
   renderScheduleView();
-  showToast('Поезд сохранён. Он доступен офлайн');
+
+  if(saved.stops.length){
+    showToast('Поезд и маршрут сохранены офлайн');
+  }else{
+    showToast('Поезд сохранён. Для остановок нужен API-ключ Яндекс Расписаний');
+  }
 }
 
-//document.getElementById('scheduleApiSearchBtn').addEventListener('click',searchYandexApi);
-/*document.getElementById('scheduleApiKeyBtn').addEventListener('click',async()=>{
-  scheduleApiKey='';
-  await getScheduleApiKey();
-  showToast(scheduleApiKey?'API-ключ принят':'API-ключ не задан');
-});*/
+scheduleApiSearchBtn.addEventListener('click',searchYandexApi);
+
 document.getElementById('openYandexScheduleBtn').addEventListener('click',()=>{
   window.open(buildYandexSearchUrl(),'_blank');
 });
