@@ -917,6 +917,116 @@
     border-color:var(--amber-dim);
   }
 
+
+  /* ---------- Agent report ---------- */
+  .agent-report-toolbar{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    margin:0 0 12px;
+  }
+  .agent-report-toolbar button{
+    background:var(--surface);
+    border:1px solid var(--line);
+    color:var(--ink);
+    border-radius:7px;
+    padding:8px 10px;
+    cursor:pointer;
+    font-size:12px;
+  }
+  .agent-report-toolbar button.primary{
+    background:var(--amber);
+    color:#1A1400;
+    border-color:var(--amber);
+    font-weight:600;
+  }
+  .agent-report-meta{
+    display:flex;
+    gap:8px;
+    margin-bottom:12px;
+    flex-wrap:wrap;
+  }
+  .agent-report-meta input{
+    flex:1;
+    min-width:180px;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:7px;
+    color:var(--ink);
+    padding:9px 10px;
+  }
+  .agent-report-table-wrap{
+    overflow:auto;
+    border:1px solid var(--line);
+    border-radius:10px;
+    background:var(--surface);
+  }
+  table.agent-report-table{
+    border-collapse:collapse;
+    width:100%;
+    min-width:900px;
+    font-size:12px;
+  }
+  table.agent-report-table th,
+  table.agent-report-table td{
+    padding:7px 8px;
+    border-bottom:1px solid var(--line);
+    text-align:right;
+    vertical-align:middle;
+  }
+  table.agent-report-table th{
+    color:var(--ink-muted);
+    font-size:10px;
+    text-transform:uppercase;
+    background:var(--surface);
+    position:sticky;
+    top:0;
+    z-index:2;
+  }
+  table.agent-report-table th:first-child,
+  table.agent-report-table td:first-child{
+    text-align:left;
+    position:sticky;
+    left:0;
+    z-index:1;
+    background:var(--surface);
+  }
+  table.agent-report-table td input{
+    width:100%;
+    min-width:70px;
+    background:var(--surface-2);
+    border:1px solid transparent;
+    border-radius:5px;
+    color:var(--ink);
+    padding:6px;
+    font:inherit;
+  }
+  table.agent-report-table td input:focus{
+    outline:none;
+    border-color:var(--amber-dim);
+  }
+  table.agent-report-table td input[name="ar-name"]{min-width:190px;text-align:left;}
+  table.agent-report-table td input[name="ar-category"]{min-width:120px;text-align:left;}
+  .agent-report-total td{
+    font-weight:600;
+    background:var(--surface-2);
+  }
+  .agent-report-delete{
+    background:transparent;
+    border:1px solid var(--line);
+    color:var(--ink-muted);
+    border-radius:5px;
+    padding:5px 7px;
+    cursor:pointer;
+  }
+  .agent-report-delete:hover{color:var(--brick);border-color:var(--brick-dim);}
+  .agent-report-note{
+    color:var(--ink-muted);
+    font-size:11px;
+    line-height:1.45;
+    margin:8px 0 12px;
+  }
+
   /* ---------- Modals ---------- */
 
   .modal-overlay{
@@ -1263,6 +1373,52 @@
 
 </div>
 
+
+<!-- ================= AGENT REPORT ================= -->
+<div id="agentReportView" class="page-view" hidden>
+  <div class="page-title">Отчёт агента</div>
+
+  <div class="agent-report-meta">
+    <input id="agentReportTitle" placeholder="Название отчёта" maxlength="120">
+    <input id="agentReportDate" type="date">
+  </div>
+
+  <div class="agent-report-toolbar">
+    <button id="agentReportAddBtn" class="primary">+ Добавить товар</button>
+    <button id="agentReportExcelBtn">Excel (.xlsx)</button>
+    <button id="agentReportGoogleBtn">Google Таблицы (.csv)</button>
+    <button id="agentReportNumbersBtn">Numbers / Apple (.xlsx)</button>
+  </div>
+
+  <div class="agent-report-note">
+    Редактируйте строки прямо в таблице. Остаток и суммы считаются автоматически.
+    Данные сохраняются в браузере и входят в резервную копию.
+  </div>
+
+  <div class="agent-report-table-wrap">
+    <table class="agent-report-table">
+      <thead>
+        <tr>
+          <th>Наименование товара</th>
+          <th>Категория</th>
+          <th>Цена</th>
+          <th>Остаток на начало<br>Кол-во</th>
+          <th>Остаток на начало<br>Сумма</th>
+          <th>Поступило<br>Кол-во</th>
+          <th>Поступило<br>Сумма</th>
+          <th>Продано<br>Кол-во</th>
+          <th>Продано<br>Сумма</th>
+          <th>Остаток<br>Кол-во</th>
+          <th>Остаток<br>Сумма</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="agentReportBody"></tbody>
+      <tfoot id="agentReportFoot"></tfoot>
+    </table>
+  </div>
+</div>
+
 <!-- ================= TRANSFERS ================= -->
 
 <div id="transfersView" class="page-view" hidden>
@@ -1316,6 +1472,11 @@
     </div>
 
     <div class="sidebar-divider"></div>
+
+
+    <button class="sidebar-nav-item" id="navAgentReport">
+      📊 Отчёт агента
+    </button>
 
     <button class="sidebar-nav-item" id="navReceipts">
       🧾 Все чеки
@@ -1690,6 +1851,13 @@
       </div>
 
       <div class="help-row">
+        <div class="help-key">Alt + 6</div>
+        <div class="help-desc">
+          Отчёт агента.
+        </div>
+      </div>
+
+      <div class="help-row">
         <div class="help-key">M</div>
         <div class="help-desc">
           Открыть / закрыть меню.
@@ -1843,6 +2011,8 @@ function loadState(){
       if(!Array.isArray(parsed.items)) parsed.items = [];
       if(!Array.isArray(parsed.receipts)) parsed.receipts = [];
       if(!Array.isArray(parsed.transfers)) parsed.transfers = [];
+      if(!Array.isArray(parsed.agentReportRows)) parsed.agentReportRows = [];
+      if(!parsed.agentReport) parsed.agentReport = {title:'Отчёт агента', date:''};
 
       return parsed;
     }
@@ -1855,6 +2025,11 @@ function loadState(){
     items:[],
     receipts:[],
     transfers:[],
+    agentReport:{
+      title:'Отчёт агента',
+      date:''
+    },
+    agentReportRows:[],
     currentWagonId:null
   };
 }
@@ -1877,6 +2052,8 @@ let catalog = state.catalog;
 let allItems = state.items;
 let allReceipts = state.receipts;
 let allTransfers = state.transfers;
+let agentReport = state.agentReport || {title:'Отчёт агента', date:''};
+let agentReportRows = state.agentReportRows || [];
 
 let currentWagonId = state.currentWagonId;
 
@@ -1914,6 +2091,11 @@ const receiptsView = document.getElementById('receiptsView');
 const summaryView = document.getElementById('summaryView');
 const catalogView = document.getElementById('catalogView');
 const transfersView = document.getElementById('transfersView');
+const agentReportView = document.getElementById('agentReportView');
+const agentReportBody = document.getElementById('agentReportBody');
+const agentReportFoot = document.getElementById('agentReportFoot');
+const agentReportTitle = document.getElementById('agentReportTitle');
+const agentReportDate = document.getElementById('agentReportDate');
 
 const addOverlay = document.getElementById('addOverlay');
 const addForm = document.getElementById('addForm');
@@ -2434,6 +2616,18 @@ document
     }
   );
 
+
+document
+  .getElementById('navAgentReport')
+  .addEventListener(
+    'click',
+    () => {
+      mainView = 'agentReport';
+      closeSidebar();
+      renderMain();
+    }
+  );
+
 /* =========================================================
    MAIN ROUTER
 ========================================================= */
@@ -2448,6 +2642,7 @@ function renderMain(){
   summaryView.hidden = true;
   catalogView.hidden = true;
   transfersView.hidden = true;
+  agentReportView.hidden = true;
 
   titleInput.hidden = true;
   staticTitle.hidden = true;
@@ -2654,6 +2849,20 @@ function renderMain(){
       );
 
     renderTransfersView();
+
+
+  }else if(mainView === 'agentReport'){
+
+    staticTitle.hidden = false;
+    staticTitle.textContent = 'Отчёт агента';
+    agentReportView.hidden = false;
+
+    if(document.activeElement !== agentReportTitle){
+      agentReportTitle.value = agentReport.title || 'Отчёт агента';
+    }
+    agentReportDate.value = agentReport.date || '';
+
+    renderAgentReportView();
 
   }
 
@@ -5283,6 +5492,355 @@ function renderTransfersView(){
 
 }
 
+
+/* =========================================================
+   AGENT REPORT
+========================================================= */
+
+function agentReportRowsNormalized(){
+  return agentReportRows.map(r => ({
+    id:r.id || uid(),
+    name:String(r.name || ''),
+    category:String(r.category || ''),
+    price:Number(r.price) || 0,
+    openingQty:Number(r.openingQty) || 0,
+    receivedQty:Number(r.receivedQty) || 0,
+    soldQty:Number(r.soldQty) || 0
+  }));
+}
+
+function saveAgentReport(){
+  state.agentReport = agentReport;
+  state.agentReportRows = agentReportRows;
+  saveState();
+}
+
+function agentReportCalc(r){
+  const price = Number(r.price) || 0;
+  const opening = Number(r.openingQty) || 0;
+  const received = Number(r.receivedQty) || 0;
+  const sold = Number(r.soldQty) || 0;
+  const remaining = opening + received - sold;
+  return {
+    opening,
+    received,
+    sold,
+    remaining,
+    openingSum:opening * price,
+    receivedSum:received * price,
+    soldSum:sold * price,
+    remainingSum:remaining * price
+  };
+}
+
+function renderAgentReportView(){
+  agentReportRows = agentReportRowsNormalized();
+
+  agentReportBody.innerHTML = agentReportRows.length
+    ? agentReportRows.map(r => {
+        const c = agentReportCalc(r);
+        return `
+          <tr data-agent-report-id="${escapeAttr(r.id)}">
+            <td><input name="ar-name" value="${escapeAttr(r.name)}" placeholder="Товар"></td>
+            <td><input name="ar-category" value="${escapeAttr(r.category)}" placeholder="Категория"></td>
+            <td><input name="ar-price" type="number" min="0" step="0.01" value="${r.price}"></td>
+            <td><input name="ar-opening" type="number" min="0" step="1" value="${c.opening}"></td>
+            <td class="mono">${money(c.openingSum)}</td>
+            <td><input name="ar-received" type="number" min="0" step="1" value="${c.received}"></td>
+            <td class="mono">${money(c.receivedSum)}</td>
+            <td><input name="ar-sold" type="number" min="0" step="1" value="${c.sold}"></td>
+            <td class="mono">${money(c.soldSum)}</td>
+            <td class="mono">${c.remaining}</td>
+            <td class="mono">${money(c.remainingSum)}</td>
+            <td>
+              <button class="agent-report-delete" title="Удалить строку">✕</button>
+            </td>
+          </tr>
+        `;
+      }).join('')
+    : `
+      <tr>
+        <td colspan="12" style="text-align:center;color:var(--ink-muted);padding:28px;">
+          Добавьте первый товар в отчёт.
+        </td>
+      </tr>
+    `;
+
+  const totals = agentReportRows.reduce((a,r) => {
+    const c = agentReportCalc(r);
+    a.opening += c.opening;
+    a.received += c.received;
+    a.sold += c.sold;
+    a.remaining += c.remaining;
+    a.openingSum += c.openingSum;
+    a.receivedSum += c.receivedSum;
+    a.soldSum += c.soldSum;
+    a.remainingSum += c.remainingSum;
+    return a;
+  }, {opening:0,received:0,sold:0,remaining:0,openingSum:0,receivedSum:0,soldSum:0,remainingSum:0});
+
+  agentReportFoot.innerHTML = `
+    <tr class="agent-report-total">
+      <td colspan="3" style="text-align:left;">ИТОГО</td>
+      <td class="mono">${totals.opening}</td>
+      <td class="mono">${money(totals.openingSum)}</td>
+      <td class="mono">${totals.received}</td>
+      <td class="mono">${money(totals.receivedSum)}</td>
+      <td class="mono">${totals.sold}</td>
+      <td class="mono">${money(totals.soldSum)}</td>
+      <td class="mono">${totals.remaining}</td>
+      <td class="mono">${money(totals.remainingSum)}</td>
+      <td></td>
+    </tr>
+  `;
+
+  agentReportBody.querySelectorAll('tr[data-agent-report-id]').forEach(row => {
+    const id = row.dataset.agentReportId;
+    const input = name => row.querySelector(`[name="${name}"]`);
+
+    ['ar-name','ar-category','ar-price','ar-opening','ar-received','ar-sold'].forEach(name => {
+      input(name).addEventListener('change', () => {
+        const r = agentReportRows.find(x => x.id === id);
+        if(!r) return;
+        r.name = input('ar-name').value.trim();
+        r.category = input('ar-category').value.trim();
+        r.price = Math.max(0, Number(input('ar-price').value) || 0);
+        r.openingQty = Math.max(0, Number(input('ar-opening').value) || 0);
+        r.receivedQty = Math.max(0, Number(input('ar-received').value) || 0);
+        r.soldQty = Math.max(0, Number(input('ar-sold').value) || 0);
+        saveAgentReport();
+        renderAgentReportView();
+      });
+    });
+
+    row.querySelector('.agent-report-delete').addEventListener('click', () => {
+      agentReportRows = agentReportRows.filter(x => x.id !== id);
+      saveAgentReport();
+      renderAgentReportView();
+      showToast('Строка отчёта удалена');
+    });
+  });
+}
+
+function addAgentReportRow(){
+  agentReportRows.push({
+    id:uid(),
+    name:'',
+    category:'',
+    price:0,
+    openingQty:0,
+    receivedQty:0,
+    soldQty:0
+  });
+  saveAgentReport();
+  renderAgentReportView();
+
+  const last = agentReportBody.querySelector('tr[data-agent-report-id]:last-child');
+  if(last){
+    const nameInput = last.querySelector('[name="ar-name"]');
+    nameInput.focus();
+  }
+}
+
+function agentReportDataMatrix(){
+  const rows = agentReportRowsNormalized();
+  const matrix = [
+    ['Отчёт агента', agentReport.title || 'Отчёт агента'],
+    ['Дата', agentReport.date || ''],
+    [],
+    [
+      'Наименование товара','Категория','Цена',
+      'Остаток на начало (кол-во)','Остаток на начало (сумма)',
+      'Поступило (кол-во)','Поступило (сумма)',
+      'Продано (кол-во)','Продано (сумма)',
+      'Остаток (кол-во)','Остаток (сумма)'
+    ]
+  ];
+
+  const totals = {opening:0,openingSum:0,received:0,receivedSum:0,sold:0,soldSum:0,remaining:0,remainingSum:0};
+
+  rows.forEach(r => {
+    const c = agentReportCalc(r);
+    totals.opening += c.opening;
+    totals.openingSum += c.openingSum;
+    totals.received += c.received;
+    totals.receivedSum += c.receivedSum;
+    totals.sold += c.sold;
+    totals.soldSum += c.soldSum;
+    totals.remaining += c.remaining;
+    totals.remainingSum += c.remainingSum;
+    matrix.push([
+      r.name,r.category,r.price,c.opening,c.openingSum,
+      c.received,c.receivedSum,c.sold,c.soldSum,c.remaining,c.remainingSum
+    ]);
+  });
+
+  matrix.push([]);
+  matrix.push([
+    'ИТОГО','','',
+    totals.opening,totals.openingSum,
+    totals.received,totals.receivedSum,
+    totals.sold,totals.soldSum,
+    totals.remaining,totals.remainingSum
+  ]);
+  return matrix;
+}
+
+function downloadAgentReportCsv(){
+  const matrix = agentReportDataMatrix();
+  const csv = matrix.map(row => row.map(v => {
+    const x = String(v == null ? '' : v);
+    return /[;"\n]/.test(x) ? '"' + x.replace(/"/g,'""') + '"' : x;
+  }).join(';')).join('\r\n');
+
+  downloadBlob(
+    'otchet-agenta-' + (agentReport.date || new Date().toISOString().slice(0,10)) + '.csv',
+    'text/csv;charset=utf-8',
+    '\ufeff' + csv
+  );
+  showToast('CSV для Google Таблиц подготовлен');
+}
+
+/* Minimal offline XLSX writer: uncompressed ZIP + inline XML strings. */
+function xlsxEscape(v){
+  return String(v == null ? '' : v)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&apos;');
+}
+function crc32(buf){
+  let table = crc32.table;
+  if(!table){
+    table = crc32.table = new Uint32Array(256);
+    for(let n=0;n<256;n++){
+      let c=n;
+      for(let k=0;k<8;k++) c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1);
+      table[n]=c>>>0;
+    }
+  }
+  let c=0xFFFFFFFF;
+  for(let i=0;i<buf.length;i++) c=table[(c^buf[i])&255]^(c>>>8);
+  return (c^0xFFFFFFFF)>>>0;
+}
+function u16(n){ return [n&255,(n>>>8)&255]; }
+function u32(n){ return [n&255,(n>>>8)&255,(n>>>16)&255,(n>>>24)&255]; }
+
+function makeZip(files){
+  const enc = new TextEncoder();
+  const parts = [];
+  const central = [];
+  let offset = 0;
+
+  files.forEach(file => {
+    const name = enc.encode(file.name);
+    const data = typeof file.data === 'string' ? enc.encode(file.data) : file.data;
+    const crc = crc32(data);
+    const local = new Uint8Array([
+      0x50,0x4b,0x03,0x04, 20,0, 0,0, 0,0, 0,0, 0,0,
+      ...u32(crc), ...u32(data.length), ...u32(data.length),
+      ...u16(name.length), 0,0, ...name
+    ]);
+    parts.push(local, data);
+
+    const c = new Uint8Array([
+      0x50,0x4b,0x01,0x02,
+      20,0,20,0, 0,0,0,0, 0,0,0,0,
+      ...u32(crc), ...u32(data.length), ...u32(data.length),
+      ...u16(name.length),0,0,0,0,0,0,0,0,0,0,
+      ...u32(offset), ...name
+    ]);
+    central.push(c);
+    offset += local.length + data.length;
+  });
+
+  const centralSize = central.reduce((n,p)=>n+p.length,0);
+  const centralOffset = offset;
+  const end = new Uint8Array([
+    0x50,0x4b,0x05,0x06,
+    0,0,0,0,
+    ...u16(files.length), ...u16(files.length),
+    ...u32(centralSize), ...u32(centralOffset),
+    0,0
+  ]);
+
+  const all = [...parts, ...central, end];
+  const total = all.reduce((n,p)=>n+p.length,0);
+  const out = new Uint8Array(total);
+  let pos=0;
+  all.forEach(p=>{out.set(p,pos);pos+=p.length;});
+  return out;
+}
+
+function downloadAgentReportXlsx(){
+  const matrix = agentReportDataMatrix();
+  const rowsXml = matrix.map((row,ri) => `
+    <row r="${ri+1}">${row.map((v,ci) => {
+      const ref = String.fromCharCode(65 + ci) + (ri+1);
+      const value = v == null ? '' : String(v);
+      if(typeof v === 'number' || (value !== '' && /^-?\\d+(\\.\\d+)?$/.test(value))){
+        return `<c r="${ref}"><v>${xlsxEscape(value)}</v></c>`;
+      }
+      return `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${xlsxEscape(value)}</t></is></c>`;
+    }).join('')}</row>`).join('');
+
+  const sheet = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<sheetData>${rowsXml}</sheetData></worksheet>`;
+
+  const workbook = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<sheets><sheet name="Отчёт агента" sheetId="1" r:id="rId1"/></sheets></workbook>`;
+
+  const rels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+</Relationships>`;
+
+  const rootRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>`;
+
+  const types = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+<Default Extension="xml" ContentType="application/xml"/>
+<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+</Types>`;
+
+  const zip = makeZip([
+    {name:'[Content_Types].xml',data:types},
+    {name:'_rels/.rels',data:rootRels},
+    {name:'xl/workbook.xml',data:workbook},
+    {name:'xl/_rels/workbook.xml.rels',data:rels},
+    {name:'xl/worksheets/sheet1.xml',data:sheet}
+  ]);
+
+  downloadBlob(
+    'otchet-agenta-' + (agentReport.date || new Date().toISOString().slice(0,10)) + '.xlsx',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    zip
+  );
+  showToast('Excel-файл подготовлен');
+}
+
+agentReportTitle.addEventListener('change', () => {
+  agentReport.title = agentReportTitle.value.trim() || 'Отчёт агента';
+  saveAgentReport();
+});
+agentReportDate.addEventListener('change', () => {
+  agentReport.date = agentReportDate.value || '';
+  saveAgentReport();
+});
+document.getElementById('agentReportAddBtn').addEventListener('click', addAgentReportRow);
+document.getElementById('agentReportExcelBtn').addEventListener('click', downloadAgentReportXlsx);
+document.getElementById('agentReportNumbersBtn').addEventListener('click', downloadAgentReportXlsx);
+document.getElementById('agentReportGoogleBtn').addEventListener('click', downloadAgentReportCsv);
+
+
 /* =========================================================
    CATALOG MODAL
 ========================================================= */
@@ -5601,6 +6159,14 @@ document
                 parsed.transfers ||
                 [],
 
+              agentReport:
+                parsed.agentReport ||
+                {title:'Отчёт агента',date:''},
+
+              agentReportRows:
+                parsed.agentReportRows ||
+                [],
+
               currentWagonId:
                 parsed.currentWagonId ||
                 null
@@ -5621,6 +6187,14 @@ document
 
             allTransfers =
               state.transfers;
+
+            agentReport =
+              state.agentReport ||
+              {title:'Отчёт агента',date:''};
+
+            agentReportRows =
+              state.agentReportRows ||
+              [];
 
             currentWagonId =
               state.currentWagonId;
@@ -6112,6 +6686,19 @@ document.addEventListener(
 
           mainView =
             'transfers';
+
+          closeSidebar();
+
+          renderMain();
+
+          return;
+
+        case '6':
+
+          e.preventDefault();
+
+          mainView =
+            'agentReport';
 
           closeSidebar();
 
