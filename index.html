@@ -6458,9 +6458,10 @@ function renderCurrentSchedule(){
     <h3>${escapeHtml(x.trainNumber?'Поезд '+x.trainNumber:'Сохранённый поезд')}</h3>
     <div class="schedule-route">${escapeHtml(x.fromName||'—')} → ${escapeHtml(x.toName||'—')} · ${escapeHtml(x.date||'')}</div>
     <div class="schedule-timers">
+      <div class="schedule-timer"><span>Сейчас</span><b id="scheduleNowTimer">—</b></div>
       <div class="schedule-timer"><span>До отправления</span><b id="scheduleDepartureTimer">—</b></div>
       <div class="schedule-timer"><span>До прибытия</span><b id="scheduleArrivalTimer">—</b></div>
-      <div class="schedule-timer"><span>Статус</span><b id="scheduleStatus">—</b></div>
+      <div class="schedule-timer"><span>Стоим</span><b id="scheduleStopTimer">—</b></div>
     </div>
     <div class="schedule-actions">
       <button id="scheduleEditRouteBtn">Добавить/изменить остановки</button>
@@ -6488,27 +6489,35 @@ function renderCurrentSchedule(){
   const dep=x.departure?scheduleZonedDate(x.date,x.departure,x.timezone||'Europe/Moscow'):null;
   const arr=x.arrival?scheduleZonedDate(x.date,x.arrival,x.timezone||'Europe/Moscow'):null;
   const now=new Date();
+  const nowEl=document.getElementById('scheduleNowTimer');
   const depEl=document.getElementById('scheduleDepartureTimer');
   const arrEl=document.getElementById('scheduleArrivalTimer');
-  const statusEl=document.getElementById('scheduleStatus');
+  const stopEl=document.getElementById('scheduleStopTimer');
 
   const update=()=>{
     const now2=new Date();
+    nowEl.textContent=now2.toLocaleTimeString('ru-RU',{
+      timeZone:x.timezone||'Europe/Moscow',
+      hour:'2-digit',
+      minute:'2-digit',
+      second:'2-digit'
+    });
     depEl.textContent=dep?formatDuration(dep-now2):'—';
     arrEl.textContent=arr?formatDuration(arr-now2):'—';
-    if(dep && now2<dep)statusEl.textContent='Ожидание';
-    else if(arr && now2<arr)statusEl.textContent='В пути';
-    else if(arr && now2>=arr)statusEl.textContent='Прибыл';
-    else statusEl.textContent='—';
+    stopEl.textContent='—';
 
     if(x.stops?.length){
       const base=x.date||new Date().toISOString().slice(0,10);
       let current=-1;
       x.stops.forEach((st,i)=>{
-        const d=st.arrival?scheduleStopDate(st,base):null;
-        const dd=st.departure?scheduleStopDate({time:st.departure},base):null;
-        if(d && now2>=d)current=i;
-        if(dd && now2>=dd)current=i;
+        const d=st.arrival?scheduleStopDate(st,base,x.timezone):null;
+        const dd=st.departure?scheduleStopDate({time:st.departure},base,x.timezone):null;
+        if(d && dd && now2>=d && now2<dd){
+          current=i;
+          stopEl.textContent=formatDuration(dd-now2);
+        }else if(d && now2>=d && (!dd || now2<dd)){
+          current=i;
+        }
       });
       scheduleStops.querySelectorAll('[data-stop-index]').forEach(el=>{
         el.classList.toggle('current',Number(el.dataset.stopIndex)===current);
