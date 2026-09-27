@@ -1422,6 +1422,7 @@
     </select>
     <button id="agentReportAddBtn" class="primary">+ Добавить товар</button>
     <button id="agentReportAddCategoryBtn">+ Категория</button>
+    <button id="agentReportDeleteCategoryBtn" title="Удалить выбранную пользовательскую категорию">− Категория</button>
     <button id="agentReportExcelBtn">Excel (.xls)</button>
     <button id="agentReportGoogleBtn">Google Таблицы (.csv)</button>
     <button id="agentReportNumbersBtn">Numbers / Apple (.xls)</button>
@@ -2140,6 +2141,7 @@ const agentReportTitle = document.getElementById('agentReportTitle');
 const agentReportDate = document.getElementById('agentReportDate');
 const agentReportCategory = document.getElementById('agentReportCategory');
 const agentReportAddCategoryBtn = document.getElementById('agentReportAddCategoryBtn');
+const agentReportDeleteCategoryBtn = document.getElementById('agentReportDeleteCategoryBtn');
 
 const addOverlay = document.getElementById('addOverlay');
 const addForm = document.getElementById('addForm');
@@ -5632,6 +5634,62 @@ function addAgentReportCategory(){
   renderAgentReportView();
   showToast('Категория «<b>'+escapeHtml(category)+'</b>» добавлена');
 }
+function deleteAgentReportCategory(){
+  const category=agentReportCategory.value;
+  if(!category){
+    showToast('Сначала выберите категорию');
+    return;
+  }
+
+  const defaults=[
+    'ЧАЙ',
+    'НЕПРОДОВОЛЬСТВЕННЫЕ ТОВАРЫ',
+    'ПРОДОВОЛЬСТВЕННЫЕ ТОВАРЫ',
+    'КОФЕЙНЫЕ НАПИТКИ',
+    'АКЦИЯ'
+  ];
+
+  if(defaults.includes(category)){
+    showToast('Стандартную категорию удалить нельзя');
+    return;
+  }
+
+  if(!agentReportCategories.some(c=>c.toLowerCase()===category.toLowerCase())){
+    showToast('Это не пользовательская категория');
+    return;
+  }
+
+  const hasProducts=agentReportRows.some(r=>
+    String(r.category||'').trim().toLowerCase()===category.toLowerCase()
+  );
+
+  if(hasProducts){
+    const ok=confirm(
+      'В категории «'+category+'» есть товары.\\n\\n'+
+      'Удаление категории не удалит товары: они будут перенесены в «БЕЗ КАТЕГОРИИ».\\n\\n'+
+      'Удалить категорию?'
+    );
+    if(!ok) return;
+
+    agentReportRows.forEach(r=>{
+      if(String(r.category||'').trim().toLowerCase()===category.toLowerCase()){
+        r.category='БЕЗ КАТЕГОРИИ';
+      }
+    });
+  }else{
+    if(!confirm('Удалить категорию «'+category+'»?')) return;
+  }
+
+  agentReportCategories=agentReportCategories.filter(c=>
+    c.toLowerCase()!==category.toLowerCase()
+  );
+
+  agentReportCategory.value='';
+  saveAgentReport();
+  renderAgentReportView();
+  showToast('Категория удалена');
+}
+
 
 function agentReportRowsNormalized(){
   return agentReportRows.map(r => ({
@@ -5875,6 +5933,7 @@ agentReportDate.addEventListener('change', () => {
 });
 document.getElementById('agentReportAddBtn').addEventListener('click', addAgentReportRow);
 agentReportAddCategoryBtn.addEventListener('click', addAgentReportCategory);
+agentReportDeleteCategoryBtn.addEventListener('click', deleteAgentReportCategory);
 document.getElementById('agentReportExcelBtn').addEventListener('click', downloadAgentReportXls);
 document.getElementById('agentReportNumbersBtn').addEventListener('click', downloadAgentReportXls);
 document.getElementById('agentReportGoogleBtn').addEventListener('click', downloadAgentReportCsv);
