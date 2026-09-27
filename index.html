@@ -661,6 +661,18 @@
     padding:4px 12px 0;
   }
 
+  .wagons-manager-add{display:flex;gap:8px;margin:0 0 14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px;}
+  .wagons-manager-add input{flex:1;min-width:0;background:var(--surface-2);border:1px solid var(--line);border-radius:7px;color:var(--ink);font-size:14px;padding:9px 10px;}
+  .wagons-manager-add input:focus{outline:none;border-color:var(--amber-dim);}
+  .wagons-manager-add button{background:var(--amber);color:#1A1400;border:none;border-radius:7px;font-weight:600;font-size:14px;padding:0 16px;cursor:pointer;}
+  .wagons-manager-list{display:flex;flex-direction:column;gap:8px;}
+  .wagons-manager-row{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:8px;}
+  .wagons-manager-open{flex:1;min-width:0;text-align:left;background:transparent;border:none;color:var(--ink);border-radius:7px;padding:8px 6px;font-size:14px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .wagons-manager-open:hover{background:var(--surface-2);}
+  .wagons-manager-open.active{color:var(--amber);}
+  .wagons-manager-delete{background:transparent;border:1px solid var(--line);color:var(--ink-muted);border-radius:7px;padding:7px 10px;font-size:12px;cursor:pointer;}
+  .wagons-manager-delete.confirm{color:var(--brick);border-color:var(--brick-dim);}
+
   .page-title{
     font-size:13px;
     font-weight:600;
@@ -1366,7 +1378,7 @@
     <small id="dateLine"></small>
   </div>
 
-  <div class="topbar-right" id="topbarRight"><span id="appVersion" class="app-version">v1.0.6</span></div>
+  <div class="topbar-right" id="topbarRight"><span id="appVersion" class="app-version">v1.0.7</span></div>
 </div>
 
 <!-- ================= SEARCH ================= -->
@@ -1385,6 +1397,16 @@
 <main id="list"></main>
 
 <div id="tableWrap" class="table-wrap" hidden></div>
+
+<!-- ================= WAGONS MANAGER ================= -->
+<div id="wagonsView" class="page-view" hidden>
+  <div class="page-title">Вагоны</div>
+  <div class="wagons-manager-add">
+    <input id="wagonNameInput" placeholder="Название/номер вагона" autocomplete="off" maxlength="60">
+    <button id="addWagonManagerBtn">Добавить</button>
+  </div>
+  <div id="wagonsManagerList" class="wagons-manager-list"></div>
+</div>
 
 <!-- ================= RECEIPTS ================= -->
 
@@ -1635,26 +1657,9 @@
 
     </div>
 
-    <div class="sidebar-section-title">
-      Все вагоны
-    </div>
-
-    <div class="wagon-list" id="wagonList"></div>
-
-    <div class="sidebar-add-wagon">
-
-      <input
-        id="newWagonName"
-        placeholder="Название/номер вагона"
-        autocomplete="off"
-      >
-
-      <button id="addWagonBtn">+</button>
-
-    </div>
-
-    <div class="sidebar-divider"></div>
-
+    <button class="sidebar-nav-item" id="navWagons">
+      🚃 Вагоны
+    </button>
 
     <button class="sidebar-nav-item" id="navAgentReport">
       📊 Отчёт агента
@@ -2079,7 +2084,7 @@
       <div class="help-row">
         <div class="help-key">N</div>
         <div class="help-desc">
-          Открыть меню и перейти в поле добавления вагона.
+          Перейти во вкладку «Вагоны» и перейти в поле добавления.
         </div>
       </div>
 
@@ -2283,7 +2288,7 @@ let scheduleApiKey = '';
 
 let currentWagonId = state.currentWagonId;
 
-let mainView = 'wagon';
+let mainView = 'wagons';
 let viewMode = 'list';
 let searchQuery = '';
 
@@ -2307,11 +2312,13 @@ const statusLine = document.getElementById('statusLine');
 const toastEl = document.getElementById('toast');
 
 const sidebarOverlay = document.getElementById('sidebarOverlay');
-const wagonListEl = document.getElementById('wagonList');
 
 const menuBtn = document.getElementById('menuBtn');
-const newWagonName = document.getElementById('newWagonName');
-const addWagonBtn = document.getElementById('addWagonBtn');
+
+const wagonsView = document.getElementById('wagonsView');
+const wagonNameInput = document.getElementById('wagonNameInput');
+const addWagonManagerBtn = document.getElementById('addWagonManagerBtn');
+const wagonsManagerList = document.getElementById('wagonsManagerList');
 
 const receiptsView = document.getElementById('receiptsView');
 const summaryView = document.getElementById('summaryView');
@@ -2572,232 +2579,119 @@ sidebarOverlay.addEventListener(
 
 function renderSidebar(){
 
-  if(!wagons.length){
+  const navMap={wagons:'navWagons',wagon:'navWagons',receipts:'navReceipts',summary:'navSummary',catalog:'navCatalog',transfers:'navTransfer',agentReport:'navAgentReport',notes:'navNotes',schedule:'navSchedule'};
 
-    wagonListEl.innerHTML =
-      '<div style="font-size:12px;color:var(--ink-muted);padding:6px 2px;">Пока нет вагонов</div>';
-
-  }else{
-
-    wagonListEl.innerHTML =
-      wagons.map(
-        w => `
-          <div
-            class="wagon-row"
-            data-wid="${w.id}"
-          >
-
-            <button
-              class="wagon-btn ${
-                w.id === currentWagonId &&
-                mainView === 'wagon'
-                  ? 'active'
-                  : ''
-              }"
-            >
-              ${escapeHtml(w.name)}
-            </button>
-
-            <button
-              class="wagon-del"
-              data-wid="${w.id}"
-            >
-              ${
-                pendingDelete.has('w_' + w.id)
-                  ? 'Точно?'
-                  : '✕'
-              }
-            </button>
-
-          </div>
-        `
-      ).join('');
-  }
-
-  wagonListEl
-    .querySelectorAll('.wagon-row')
-    .forEach(row => {
-
-      const wid = row.dataset.wid;
-
-      row
-        .querySelector('.wagon-btn')
-        .addEventListener(
-          'click',
-          () => {
-
-            currentWagonId = wid;
-
-            state.currentWagonId =
-              wid;
-
-            mainView = 'wagon';
-
-            closeSidebar();
-
-            saveState();
-
-            renderMain();
-
-          }
-        );
-
-      const delBtn =
-        row.querySelector('.wagon-del');
-
-      delBtn.addEventListener(
-        'click',
-        () => {
-
-          if(
-            pendingDelete.has(
-              'w_' + wid
-            )
-          ){
-
-            pendingDelete.delete(
-              'w_' + wid
-            );
-
-            wagons =
-              wagons.filter(
-                w => w.id !== wid
-              );
-
-            state.wagons = wagons;
-
-            allItems =
-              allItems.filter(
-                it => it.wagonId !== wid
-              );
-
-            state.items = allItems;
-
-            allReceipts =
-              allReceipts.filter(
-                r => r.wagonId !== wid
-              );
-
-            state.receipts =
-              allReceipts;
-
-            if(currentWagonId === wid){
-
-              currentWagonId =
-                wagons.length
-                  ? wagons[0].id
-                  : null;
-
-              state.currentWagonId =
-                currentWagonId;
-
-            }
-
-            saveState();
-
-            renderMain();
-
-          }else{
-
-            pendingDelete.add(
-              'w_' + wid
-            );
-
-            renderSidebar();
-
-            setTimeout(
-              () => {
-
-                if(
-                  pendingDelete.has(
-                    'w_' + wid
-                  )
-                ){
-
-                  pendingDelete.delete(
-                    'w_' + wid
-                  );
-
-                  renderSidebar();
-
-                }
-
-              },
-              3000
-            );
-
-          }
-
-        }
-      );
-
-    });
+  document.querySelectorAll('.sidebar-nav-item').forEach(btn=>{
+    btn.classList.toggle('active',btn.id===navMap[mainView]);
+  });
 }
 
 /* =========================================================
-   ADD WAGON
+   WAGONS MANAGER
 ========================================================= */
+
+function deleteWagonById(wid){
+
+  pendingDelete.delete('w_'+wid);
+  wagons=wagons.filter(w=>w.id!==wid);
+  state.wagons=wagons;
+  allItems=allItems.filter(it=>it.wagonId!==wid);
+  state.items=allItems;
+  allReceipts=allReceipts.filter(r=>r.wagonId!==wid);
+  state.receipts=allReceipts;
+
+  if(currentWagonId===wid){
+    currentWagonId=wagons.length?wagons[0].id:null;
+    state.currentWagonId=currentWagonId;
+  }
+
+  saveState();
+  renderWagonsView();
+  renderSidebar();
+}
+
+function renderWagonsView(){
+
+  if(mainView!=='wagons') return;
+
+  if(!wagons.length){
+    wagonsManagerList.innerHTML='<div class="empty">Пока нет вагонов.<br>Добавьте первый вагон выше.</div>';
+    return;
+  }
+
+  wagonsManagerList.innerHTML=wagons.map(w=>`
+    <div class="wagons-manager-row" data-wid="${w.id}">
+      <button class="wagons-manager-open ${w.id===currentWagonId?'active':''}">🚃 ${escapeHtml(w.name)}</button>
+      <button class="wagons-manager-delete ${pendingDelete.has('w_'+w.id)?'confirm':''}" title="Удалить вагон">${pendingDelete.has('w_'+w.id)?'Точно?':'Удалить'}</button>
+    </div>
+  `).join('');
+
+  wagonsManagerList.querySelectorAll('.wagons-manager-row').forEach(row=>{
+
+    const wid=row.dataset.wid;
+
+    row.querySelector('.wagons-manager-open').addEventListener('click',()=>{
+      currentWagonId=wid;
+      state.currentWagonId=wid;
+      mainView='wagon';
+      saveState();
+      renderMain();
+    });
+
+    row.querySelector('.wagons-manager-delete').addEventListener('click',()=>{
+
+      const key='w_'+wid;
+
+      if(pendingDelete.has(key)){
+        deleteWagonById(wid);
+        return;
+      }
+
+      pendingDelete.add(key);
+      renderWagonsView();
+
+      setTimeout(()=>{
+        if(pendingDelete.has(key)){
+          pendingDelete.delete(key);
+          renderWagonsView();
+        }
+      },3000);
+
+    });
+  });
+}
 
 function addNewWagon(){
 
-  const name =
-    newWagonName.value.trim();
+  const name=wagonNameInput.value.trim();
 
-  // if(!name){
-  //   newWagonName.focus();
-  //   return;
-  // }
+  if(!name){
+    wagonNameInput.focus();
+    return;
+  }
 
-  const w = {
-    id:uid(),
-    name,
-    createdAt:Date.now()
-  };
+  const w={id:uid(),name,createdAt:Date.now()};
 
   wagons.push(w);
-
-  state.wagons = wagons;
-
-  newWagonName.value = '';
-
-  currentWagonId = w.id;
-
-  state.currentWagonId =
-    w.id;
-
-  mainView = 'wagon';
-
-  //closeSidebar();
+  state.wagons=wagons;
+  wagonNameInput.value='';
+  currentWagonId=w.id;
+  state.currentWagonId=w.id;
 
   saveState();
-
-  showToast(
-    `Вагон «<b>${escapeHtml(name)}</b>» добавлен`
-  );
-
-  renderMain();
-
+  showToast(`Вагон «<b>${escapeHtml(name)}</b>» добавлен`);
+  renderWagonsView();
+  renderSidebar();
 }
 
-addWagonBtn.addEventListener(
-  'click',
-  addNewWagon
-);
+addWagonManagerBtn.addEventListener('click',addNewWagon);
 
-newWagonName.addEventListener(
-  'keydown',
-  e => {
-
-    if(e.key === 'Enter'){
-
-      e.preventDefault();
-
-      addNewWagon();
-
-    }
-
+wagonNameInput.addEventListener('keydown',e=>{
+  if(e.key==='Enter'){
+    e.preventDefault();
+    addNewWagon();
   }
-);
+});
 
 /* =========================================================
    APP UPDATE
@@ -2829,6 +2723,14 @@ document.getElementById('forceAppUpdateBtn').addEventListener('click',forceAppUp
 /* =========================================================
    NAVIGATION
 ========================================================= */
+
+document
+  .getElementById('navWagons')
+  .addEventListener('click',()=>{
+    mainView='wagons';
+    closeSidebar();
+    renderMain();
+  });
 
 document
   .getElementById('navReceipts')
@@ -2924,6 +2826,7 @@ function renderMain(){
   listEl.hidden = true;
   tableWrap.hidden = true;
   searchBar.hidden = true;
+  wagonsView.hidden = true;
 
   receiptsView.hidden = true;
   summaryView.hidden = true;
@@ -2936,9 +2839,24 @@ function renderMain(){
   titleInput.hidden = true;
   staticTitle.hidden = true;
 
-  topbarRight.innerHTML = '<span class="app-version">v1.0.6</span>';
+  topbarRight.innerHTML = '<span class="app-version">v1.0.7</span>';
 
-  if(mainView === 'wagon'){
+  if(mainView === 'wagons'){
+
+    staticTitle.hidden=false;
+    staticTitle.textContent='Вагоны';
+    wagonsView.hidden=false;
+
+    topbarRight.innerHTML='<button id="openWagonAddBtn" class="icon-plain" title="Добавить вагон">+</button>';
+
+    document.getElementById('openWagonAddBtn').addEventListener('click',()=>{
+      wagonNameInput.focus();
+      wagonNameInput.select();
+    });
+
+    renderWagonsView();
+
+  }else if(mainView === 'wagon'){
 
     if(!wagons.length){
 
@@ -2952,7 +2870,7 @@ function renderMain(){
       staticTitle.textContent =
         'Вагоны';
 
-      topbarRight.innerHTML='<span class="app-version">v1.0.6</span>';
+      topbarRight.innerHTML='<span class="app-version">v1.0.7</span>';
       renderSidebar();
 
       return;
@@ -3171,7 +3089,7 @@ function renderMain(){
   }
 
   if(!topbarRight.querySelector('.app-version')){
-    topbarRight.insertAdjacentHTML('beforeend','<span class="app-version">v1.0.6</span>');
+    topbarRight.insertAdjacentHTML('beforeend','<span class="app-version">v1.0.7</span>');
   }
 
   renderSidebar();
@@ -7800,6 +7718,13 @@ function openCurrentMainAction(){
 
   switch(mainView){
 
+    case 'wagons':
+
+      wagonNameInput.focus();
+      wagonNameInput.select();
+
+      break;
+
     case 'wagon':
 
       if(currentWagonId){
@@ -8061,7 +7986,7 @@ document.addEventListener(
             currentWagonId;
 
           mainView =
-            'wagon';
+            'wagons';
 
           closeSidebar();
 
@@ -8236,28 +8161,14 @@ document.addEventListener(
 
       e.preventDefault();
 
-      if(!sidebarOverlay.hidden){
+      mainView='wagons';
+      closeSidebar();
+      renderMain();
 
-        newWagonName.focus();
-
-        newWagonName.select();
-
-      }else{
-
-        openSidebar();
-
-        setTimeout(
-          () => {
-
-            newWagonName.focus();
-
-            newWagonName.select();
-
-          },
-          50
-        );
-
-      }
+      setTimeout(()=>{
+        wagonNameInput.focus();
+        wagonNameInput.select();
+      },50);
 
       return;
 
@@ -8283,7 +8194,7 @@ if('serviceWorker' in navigator){
     () => {
 
       navigator.serviceWorker
-        .register('sw.js?v=17')
+        .register('sw.js?v=18')
         .catch(() => {});
 
     }
