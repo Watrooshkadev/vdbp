@@ -6348,25 +6348,16 @@ function parseCopiedYandexStops(raw){
     while(j<lines.length && following.length<3){
       const v=lines[j];
 
-      if(isScheduleDateHeading(v) || /^мск\s*[+-]\s*\d+\s*ч$/i.test(v) || /^московское время$/i.test(v)){
-        j++;
-        continue;
-      }
-
-      if(/^\d+\s*км\*?$/i.test(v)){
-        j++;
-        continue;
-      }
-
       if(isScheduleTime(v) || isScheduleDuration(v)){
         following.push(v);
         j++;
         continue;
       }
 
+      // Любая текстовая строка после станции означает начало следующего пункта.
+      // Поэтому дата, километры и «МСК +1 ч» не забирают время следующей станции.
       break;
     }
-
     if(following.length){
       let arrival='';
       let departure='';
