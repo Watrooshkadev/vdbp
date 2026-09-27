@@ -6534,6 +6534,7 @@ function saveSchedule(item){
     toName:item.toName||'',
     date:item.date||'',
     timezone:item.timezone||'Europe/Moscow',
+    timezoneLabel:item.timezoneLabel||'Московское время',
     departure:item.departure||'',
     arrival:item.arrival||'',
     stops:Array.isArray(item.stops)?item.stops:[],
@@ -6984,13 +6985,20 @@ async function parseYandexAndSave(){
 
   if(rawStops){
     parsed.stops=parseCopiedYandexStops(rawStops);
+    parsed.timezoneLabel=parsed.stops.timezoneLabel||'Московское время';
     if(!parsed.stops.length){
       showToast('Не удалось распознать остановки');
       return;
     }
   }else{
     parsed.stops=[];
+    parsed.timezoneLabel='Московское время';
   }
+
+  const firstStop=parsed.stops[0];
+  const lastStop=parsed.stops[parsed.stops.length-1];
+  if(!parsed.departure && firstStop && firstStop.departure) parsed.departure=firstStop.departure;
+  if(!parsed.arrival && lastStop && lastStop.arrival) parsed.arrival=lastStop.arrival;
 
   const saved=saveSchedule(parsed);
   scheduleFrom.value=saved.fromName||scheduleFrom.value;
