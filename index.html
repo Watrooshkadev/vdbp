@@ -6706,12 +6706,12 @@ function parseYandexAndSave(){
   showToast('Поезд сохранён. Он доступен офлайн');
 }
 
-document.getElementById('scheduleApiSearchBtn').addEventListener('click',searchYandexApi);
-document.getElementById('scheduleApiKeyBtn').addEventListener('click',async()=>{
+//document.getElementById('scheduleApiSearchBtn').addEventListener('click',searchYandexApi);
+/*document.getElementById('scheduleApiKeyBtn').addEventListener('click',async()=>{
   scheduleApiKey='';
   await getScheduleApiKey();
   showToast(scheduleApiKey?'API-ключ принят':'API-ключ не задан');
-});
+});*/
 document.getElementById('openYandexScheduleBtn').addEventListener('click',()=>{
   window.open(buildYandexSearchUrl(),'_blank');
 });
