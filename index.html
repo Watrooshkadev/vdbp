@@ -1438,7 +1438,7 @@
     <small id="dateLine"></small>
   </div>
 
-  <div class="topbar-right" id="topbarRight"><span id="appVersion" class="app-version">v1.1.6</span></div>
+  <div class="topbar-right" id="topbarRight"><span id="appVersion" class="app-version">v1.1.7</span></div>
 </div>
 
 <!-- ================= SEARCH ================= -->
@@ -1552,6 +1552,11 @@
 <div id="catalogView" class="page-view" hidden>
 
   <div class="page-title">Список товаров (каталог)</div>
+
+  <div class="catalog-toolbar" style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px;">
+    <button id="catalogAddBtn" class="primary">＋ Добавить товар</button>
+    <button id="catalogBulkAddBtn">☷ Массовое добавление</button>
+  </div>
 
   <div id="catalogList"></div>
 
@@ -2041,6 +2046,24 @@
 
 </div>
 
+<!-- ================= BULK CATALOG MODAL ================= -->
+
+<div id="bulkCatalogOverlay" class="modal-overlay" hidden>
+  <div class="modal-card">
+    <div class="modal-title">Массовое добавление товаров</div>
+    <div class="modal-hint" style="margin-bottom:10px;">Один товар на строку. Можно вставить из Excel/Google Таблиц: название + Tab + цена.</div>
+    <textarea id="bulkCatalogText" rows="10" placeholder="Шоколад
+Печенье
+Чипсы	120
+Сок	85" style="width:100%;resize:vertical;box-sizing:border-box;min-height:180px;"></textarea>
+    <input id="bulkCatalogDefaultPrice" type="number" inputmode="decimal" min="0" step="0.01" placeholder="Цена по умолчанию, р. (необязательно)">
+    <div class="modal-actions">
+      <button type="button" id="cancelBulkCatalogBtn" class="modal-cancel">Отмена</button>
+      <button type="button" id="saveBulkCatalogBtn" class="modal-submit">Добавить товары</button>
+    </div>
+  </div>
+</div>
+
 <!-- ================= KEYBOARD HELP ================= -->
 
 <div id="helpOverlay" class="modal-overlay" hidden>
@@ -2439,6 +2462,9 @@ const transferForm = document.getElementById('transferForm');
 
 const addCatalogOverlay = document.getElementById('addCatalogOverlay');
 const addCatalogForm = document.getElementById('addCatalogForm');
+const bulkCatalogOverlay = document.getElementById('bulkCatalogOverlay');
+const bulkCatalogText = document.getElementById('bulkCatalogText');
+const bulkCatalogDefaultPrice = document.getElementById('bulkCatalogDefaultPrice');
 
 const helpOverlay = document.getElementById('helpOverlay');
 const closeHelpBtn = document.getElementById('closeHelpBtn');
@@ -2996,7 +3022,7 @@ function renderMain(){
   titleInput.hidden = true;
   staticTitle.hidden = true;
 
-  topbarRight.innerHTML = '<span class="app-version">v1.1.6</span>';
+  topbarRight.innerHTML = '<span class="app-version">v1.1.7</span>';
 
   if(mainView === 'wagons'){
 
@@ -3027,7 +3053,7 @@ function renderMain(){
       staticTitle.textContent =
         'Вагоны';
 
-      topbarRight.innerHTML='<span class="app-version">v1.1.6</span>';
+      topbarRight.innerHTML='<span class="app-version">v1.1.7</span>';
       renderSidebar();
 
       return;
@@ -3176,6 +3202,13 @@ function renderMain(){
       >
         +
       </button>
+      <button
+        id="openCatalogBulkAddBtn"
+        class="icon-plain"
+        title="Массовое добавление товаров"
+      >
+        ☷
+      </button>
     `;
 
     document
@@ -3183,6 +3216,27 @@ function renderMain(){
       .addEventListener(
         'click',
         openCatalogModal
+      );
+
+    document
+      .getElementById('openCatalogBulkAddBtn')
+      .addEventListener(
+        'click',
+        openBulkCatalogModal
+      );
+
+    document
+      .getElementById('catalogAddBtn')
+      .addEventListener(
+        'click',
+        openCatalogModal
+      );
+
+    document
+      .getElementById('catalogBulkAddBtn')
+      .addEventListener(
+        'click',
+        openBulkCatalogModal
       );
 
     renderCatalogView();
@@ -3246,7 +3300,7 @@ function renderMain(){
   }
 
   if(!topbarRight.querySelector('.app-version')){
-    topbarRight.insertAdjacentHTML('beforeend','<span class="app-version">v1.1.6</span>');
+    topbarRight.insertAdjacentHTML('beforeend','<span class="app-version">v1.1.7</span>');
   }
 
   renderSidebar();
@@ -7369,6 +7423,48 @@ document.getElementById('showScheduleSearchBtn').addEventListener('click',()=>{
   }
 });
 
+
+/* =========================================================
+   CATALOG BULK MODAL
+========================================================= */
+
+function openBulkCatalogModal(){
+  bulkCatalogOverlay.hidden = false;
+  bulkCatalogText.focus();
+}
+
+function closeBulkCatalogModal(){
+  bulkCatalogOverlay.hidden = true;
+}
+
+document.getElementById('cancelBulkCatalogBtn').addEventListener('click', closeBulkCatalogModal);
+bulkCatalogOverlay.addEventListener('click', e => {
+  if(e.target === bulkCatalogOverlay) closeBulkCatalogModal();
+});
+
+document.getElementById('saveBulkCatalogBtn').addEventListener('click', () => {
+  const defaultPrice = Math.max(0, parseFloat(bulkCatalogDefaultPrice.value) || 0);
+  const lines = bulkCatalogText.value.split('\\n');
+  let added = 0;
+  lines.forEach(line => {
+    const raw = line.trim();
+    if(!raw) return;
+    const parts = raw.split(/\\t|;/).map(v => v.trim());
+    const name = parts[0];
+    if(!name) return;
+    const price = parts.length > 1 ? Math.max(0, parseFloat(parts[1].replace(',', '.')) || 0) : defaultPrice;
+    catalog.push({id:uid(), name, price, createdAt:Date.now() + added});
+    added++;
+  });
+  if(!added){ showToast('Введите хотя бы один товар'); return; }
+  state.catalog = catalog;
+  saveState();
+  closeBulkCatalogModal();
+  bulkCatalogText.value = '';
+  bulkCatalogDefaultPrice.value = '';
+  showToast('Добавлено товаров: <b>' + added + '</b>');
+  if(mainView === 'catalog') renderCatalogView();
+});
 
 /* =========================================================
    CATALOG MODAL
