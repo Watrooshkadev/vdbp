@@ -6432,7 +6432,7 @@ document.getElementById('scheduleFromMobile')?.addEventListener('change',e=>{
 document.getElementById('scheduleToMobile')?.addEventListener('change',e=>{
   scheduleTo.value=e.target.value;
   scheduleTo.dispatchEvent(new Event('input',{bubbles:true}));
-}
+});
 
 function scheduleCityCode(name){
   const n=String(name||'').trim().toLowerCase();
