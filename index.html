@@ -6656,10 +6656,11 @@ function renderCurrentSchedule(){
   scheduleCurrent.innerHTML=`
     <h3>${escapeHtml(x.trainNumber?'Поезд '+x.trainNumber:'Сохранённый поезд')}</h3>
     <div class="schedule-route">${escapeHtml(x.fromName||'—')} → ${escapeHtml(x.toName||'—')} · ${escapeHtml(x.date||'')}</div>
+    <div class="schedule-timezone">🕐 ${escapeHtml(x.timezoneLabel||'Московское время')}</div>
+    <div id="scheduleStatus" class="schedule-status"><b>Определяем положение поезда…</b><small>Время обновляется автоматически</small></div>
     <div class="schedule-timers">
       <div class="schedule-timer"><span>Сейчас</span><b id="scheduleNowTimer">—</b></div>
-      <div class="schedule-timer"><span>До отправления</span><b id="scheduleDepartureTimer">—</b></div>
-      <div class="schedule-timer"><span>До прибытия</span><b id="scheduleArrivalTimer">—</b></div>
+      <div class="schedule-timer"><span>До следующей станции</span><b id="scheduleArrivalTimer">—</b></div>
       <div class="schedule-timer"><span>Стоим</span><b id="scheduleStopTimer">—</b></div>
     </div>
     <div class="schedule-actions">
@@ -6688,35 +6689,69 @@ function renderCurrentSchedule(){
   const arrEl=document.getElementById('scheduleArrivalTimer');
   const stopEl=document.getElementById('scheduleStopTimer');
 
+  const statusEl=document.getElementById('scheduleStatus');
   const update=()=>{
     const now2=new Date();
     nowEl.textContent=now2.toLocaleTimeString('ru-RU',{
-      timeZone:x.timezone||'Europe/Moscow',
-      hour:'2-digit',
-      minute:'2-digit',
-      second:'2-digit'
+      timeZone:x.timezone||'Europe/Moscow',hour:'2-digit',minute:'2-digit',second:'2-digit'
     });
-    depEl.textContent=dep?formatDuration(dep-now2):'—';
-    arrEl.textContent=arr?formatDuration(arr-now2):'—';
-    stopEl.textContent='—';
 
-    if(x.stops?.length){
-      const base=x.date||new Date().toISOString().slice(0,10);
-      let current=-1;
-      x.stops.forEach((st,i)=>{
-        const d=st.arrival?scheduleStopDate(st,base,x.timezone):null;
-        const dd=st.departure?scheduleStopDate({time:st.departure},base,x.timezone):null;
-        if(d && dd && now2>=d && now2<dd){
-          current=i;
-          stopEl.textContent=formatDuration(dd-now2);
-        }else if(d && now2>=d && (!dd || now2<dd)){
-          current=i;
-        }
-      });
-      scheduleStops.querySelectorAll('[data-stop-index]').forEach(el=>{
-        el.classList.toggle('current',Number(el.dataset.stopIndex)===current);
-      });
+    let current=-1;
+    let next=-1;
+    let mode='future';
+    let remaining=null;
+    let main='Ожидание отправления';
+    let sub='';
+
+    x.stops.forEach((st,i)=>{
+      st._status='future';
+      const arrival=scheduleZonedDate(x.date,st.arrival,x.timezone||'Europe/Moscow',Number(st.dayOffset)||0);
+      const departure=scheduleZonedDate(x.date,st.departure,x.timezone||'Europe/Moscow',Number(st.dayOffset)||0);
+      st._arrival=arrival;
+      st._departure=departure;
+
+      const nextSt=x.stops[i+1];
+      const nextArrival=nextSt?scheduleZonedDate(x.date,nextSt.arrival,x.timezone||'Europe/Moscow',Number(nextSt.dayOffset)||0):null;
+
+      if(departure && now2>=departure && nextArrival && now2<nextArrival){
+        current=i; next=i+1; mode='travel'; remaining=nextArrival-now2;
+        main='В пути → '+nextSt.name;
+        sub='До станции: '+formatDuration(remaining);
+      }else if(arrival && departure && now2>=arrival && now2<departure){
+        current=i; next=i+1<x.stops.length?i+1:-1; mode='stop'; remaining=departure-now2;
+        main='Стоим: '+st.name;
+        sub='До отправления: '+formatDuration(remaining);
+      }else if(arrival && now2<arrival && next<0){
+        next=i; mode='travel'; remaining=arrival-now2;
+        main=i===0?'До отправления: '+st.name:'В пути → '+st.name;
+        sub='До станции: '+formatDuration(remaining);
+      }else if(arrival && now2>=arrival){
+        st._status='past';
+      }
+    });
+
+    if(current>=0)x.stops[current]._status=mode==='stop'?'current':'past';
+    if(next>=0 && x.stops[next])x.stops[next]._status='next';
+
+    if(current<0 && next<0){
+      const last=x.stops[x.stops.length-1];
+      if(last && last._arrival && now2>=last._arrival){
+        last._status='current';
+        main='Маршрут завершён';
+        sub='Прибыли: '+last.name;
+      }
     }
+
+    arrEl.textContent=remaining!=null?formatDuration(remaining):'—';
+    stopEl.textContent=mode==='stop'&&remaining!=null?formatDuration(remaining):'—';
+    statusEl.innerHTML='<b>'+escapeHtml(main)+'</b><small>'+escapeHtml(sub)+'</small>';
+
+    scheduleStops.querySelectorAll('[data-stop-index]').forEach(el=>{
+      const idx=Number(el.dataset.stopIndex);
+      const st=x.stops[idx];
+      el.classList.remove('past','current','next','future');
+      el.classList.add(st?._status||'future');
+    });
   };
   update();
   clearInterval(window.__scheduleTimer);
