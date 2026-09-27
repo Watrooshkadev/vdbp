@@ -1081,6 +1081,9 @@
   .schedule-search{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:12px;}
   .schedule-fields{display:grid;grid-template-columns:1fr 1fr 170px;gap:8px;}
   .schedule-fields input{width:100%;background:var(--surface-2);border:1px solid var(--line);border-radius:7px;color:var(--ink);padding:9px 10px;font:inherit;}
+  .schedule-stops-input{width:100%;min-height:260px;resize:vertical;background:var(--surface-2);border:1px solid var(--line);border-radius:7px;color:var(--ink);padding:10px 12px;font:13px/1.5 ui-monospace,monospace;margin-top:10px;}
+  .schedule-stops-input:focus{outline:none;border-color:var(--amber-dim);}
+  .schedule-parse-info{font-size:11px;color:var(--ink-muted);line-height:1.45;margin-top:6px;}
   .schedule-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
   .schedule-help{font-size:11px;color:var(--ink-muted);line-height:1.45;margin-top:8px;}
   .schedule-current{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px;}
@@ -1540,31 +1543,43 @@
       <input id="scheduleFrom" list="scheduleCities" placeholder="Откуда">
       <input id="scheduleTo" list="scheduleCities" placeholder="Куда">
       <input id="scheduleDate" type="date">
-      <select id="scheduleTimezone">
-        <option value="Europe/Moscow">Москва (МСК, UTC+3)</option>
-        <option value="Europe/Kaliningrad">Калининград (UTC+2)</option>
-        <option value="Europe/Samara">Самара (UTC+4)</option>
-        <option value="Asia/Yekaterinburg">Екатеринбург (UTC+5)</option>
-        <option value="Asia/Omsk">Омск (UTC+6)</option>
-        <option value="Asia/Krasnoyarsk">Красноярск (UTC+7)</option>
-        <option value="Asia/Irkutsk">Иркутск (UTC+8)</option>
-        <option value="Asia/Yakutsk">Якутск (UTC+9)</option>
-        <option value="Asia/Vladivostok">Владивосток (UTC+10)</option>
-        <option value="Asia/Magadan">Магадан (UTC+11)</option>
-        <option value="Asia/Kamchatka">Камчатка (UTC+12)</option>
-      </select>
+      <input id="scheduleTimezone" type="hidden" value="Europe/Moscow">
     </div>
     <datalist id="scheduleCities"></datalist>
     <div class="schedule-actions">
       <!--button id="scheduleApiSearchBtn" class="primary">🔎 Найти поезда</button-->
       <button id="openYandexScheduleBtn">Открыть поиск Яндекс</button>
-      <button id="parseYandexLinkBtn">Разобрать ссылку Яндекс</button>
+      <button id="parseYandexLinkBtn">Сохранить поезд</button>
       <!--button id="scheduleApiKeyBtn">🔑 API-ключ</button-->
     </div>
     <input id="yandexScheduleLink" class="schedule-link" placeholder="Вставьте ссылку поиска или выбранного поезда Яндекс Расписаний">
+    <textarea id="yandexStopsInput" class="schedule-stops-input" placeholder="Скопируйте сюда остановки с Яндекса целиком — прямо как они отображаются на странице. Например:
+
+28 сентября
+Московское время
+Нижний Новгород (Московский вокзал)
+—
+—
+15:47
+Окская*
+16:20
+18 мин
+16:38
+Суроватиха
+17:32
+1 мин
+17:33
+...
+Новороссийск
+18:30"></textarea>
+    <div class="schedule-parse-info">
+      Время отдельно вводить не нужно. Оно берётся из ссылки и из скопированного расписания.
+      Строки вроде «296 км*», «МСК +1 ч», дат и «Московское время» будут пропущены автоматически.
+    </div>
     <div class="schedule-help">
-      После выбора поезда в Яндексе скопируйте ссылку на поезд и вставьте её сюда.
-      Приложение сохранит номер, направление, дату и время. Сохранённые данные доступны без интернета.
+      1. Вставьте ссылку на выбранный поезд Яндекс.<br>
+      2. Скопируйте с Яндекса весь список остановок и вставьте выше.<br>
+      3. Нажмите «Сохранить поезд».
     </div>
   </div>
 
@@ -6267,6 +6282,126 @@ function formatDuration(ms){
   return sign+String(h).padStart(2,'0')+'ч '+String(m).padStart(2,'0')+'м '+String(ss).padStart(2,'0')+'с';
 }
 
+function isScheduleTime(v){
+  return /^\d{1,2}:\d{2}$/.test(String(v||'').trim());
+}
+
+function isScheduleDuration(v){
+  return /^\d+\s*(?:мин|м|ч|час(?:а|ов)?)(?:\s*\d+\s*мин)?$/i.test(String(v||'').trim());
+}
+
+function isScheduleDateHeading(v){
+  return /^\d{1,2}\s+(?:января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)(?:\s+\d{4})?$/i.test(String(v||'').trim());
+}
+
+function isScheduleNoise(v){
+  const s=String(v||'').trim();
+  if(!s || s==='—' || s==='–' || s==='-') return true;
+  if(isScheduleTime(s) || isScheduleDuration(s) || isScheduleDateHeading(s)) return true;
+  if(/^\d+\s*км\*?$/i.test(s)) return true;
+  if(/^мск\s*[+-]\s*\d+\s*ч$/i.test(s)) return true;
+  if(/^московское время$/i.test(s)) return true;
+  return false;
+}
+
+function parseCopiedYandexStops(raw){
+  const lines=String(raw||'')
+    .replace(/\r/g,'')
+    .split('\n')
+    .map(v=>v.trim())
+    .filter(Boolean);
+
+  const result=[];
+  let i=0;
+
+  while(i<lines.length){
+    const name=lines[i];
+
+    if(isScheduleNoise(name)){
+      i++;
+      continue;
+    }
+
+    // Поддерживаем и уже подготовленный формат: Название | прибытие | отправление.
+    if(name.includes('|')){
+      const p=name.split('|').map(v=>v.trim());
+      if(p[0] && !isScheduleNoise(p[0])){
+        result.push({
+          name:p[0],
+          arrival:isScheduleTime(p[1])?p[1]:'',
+          departure:isScheduleTime(p[2])?p[2]:'',
+          stopTime:p[3]||''
+        });
+      }
+      i++;
+      continue;
+    }
+
+    const station=name.replace(/\*$/,'').trim();
+    if(!station || isScheduleNoise(station)){
+      i++;
+      continue;
+    }
+
+    const following=[];
+    let j=i+1;
+    while(j<lines.length && following.length<3){
+      const v=lines[j];
+
+      if(isScheduleDateHeading(v) || /^мск\s*[+-]\s*\d+\s*ч$/i.test(v) || /^московское время$/i.test(v)){
+        j++;
+        continue;
+      }
+
+      if(/^\d+\s*км\*?$/i.test(v)){
+        j++;
+        continue;
+      }
+
+      if(isScheduleTime(v) || isScheduleDuration(v)){
+        following.push(v);
+        j++;
+        continue;
+      }
+
+      break;
+    }
+
+    if(following.length){
+      let arrival='';
+      let departure='';
+      let stopTime='';
+
+      if(isScheduleTime(following[0])) arrival=following[0];
+
+      if(following.length>=3 && isScheduleDuration(following[1]) && isScheduleTime(following[2])){
+        stopTime=following[1];
+        departure=following[2];
+      }else if(following.length>=2 && isScheduleTime(following[1])){
+        departure=following[1];
+      }else if(following.length===1){
+        // Для первой/последней станции одно время считаем отправлением,
+        // если это первая станция, и прибытием для остальных.
+        if(!result.length) departure=following[0];
+        else arrival=following[0];
+      }
+
+      result.push({name:station,arrival,departure,stopTime});
+      i=j;
+    }else{
+      i++;
+    }
+  }
+
+  return result;
+}
+
+function formatStopMinutes(value){
+  if(value===undefined || value===null || value==='') return '';
+  if(typeof value==='number') return Math.round(value/60)+' мин';
+  return String(value);
+}
+
 function parseYandexUrl(raw){
   try{
     const u=new URL(raw.trim());
@@ -6359,6 +6494,7 @@ function saveSchedule(item){
     departure:item.departure||'',
     arrival:item.arrival||'',
     stops:Array.isArray(item.stops)?item.stops:[],
+    rawStopsText:item.rawStopsText||'',
     sourceUrl:item.sourceUrl||'',
     updatedAt:Date.now()
   };
@@ -6375,6 +6511,10 @@ function renderScheduleView(){
   if(!scheduleDate.value)scheduleDate.value=new Date().toISOString().slice(0,10);
   if(!scheduleTimezone.value)scheduleTimezone.value='Europe/Moscow';
   renderSavedSchedules();
+  const current=schedules.find(s=>s.id===currentScheduleId)||schedules[0];
+  if(typeof yandexStopsInput!=='undefined'){
+    yandexStopsInput.value=current?.rawStopsText||'';
+  }
   renderCurrentSchedule();
 }
 
@@ -6464,7 +6604,7 @@ function renderCurrentSchedule(){
       <div class="schedule-timer"><span>Стоим</span><b id="scheduleStopTimer">—</b></div>
     </div>
     <div class="schedule-actions">
-      <button id="scheduleEditRouteBtn">Добавить/изменить остановки</button>
+      <button id="scheduleEditRouteBtn">Изменить остановки</button>
       <button id="scheduleOpenSourceBtn">Открыть Яндекс</button>
     </div>
   `;
@@ -6473,17 +6613,12 @@ function renderCurrentSchedule(){
     if(x.sourceUrl)window.open(x.sourceUrl,'_blank');
   });
   document.getElementById('scheduleEditRouteBtn').addEventListener('click',()=>{
-    const route=x.stops?.length?x.stops:[];
-    const text=prompt(
-      'Остановки по одной строке в формате:\\nНазвание | прибытие | отправление\\n\\nНапример:\\nАрзамас | 17:20 | 17:23',
-      route.map(s=>(s.name||'')+' | '+(s.arrival||'')+' | '+(s.departure||'')).join('\\n')
-    );
-    if(text===null)return;
-    x.stops=text.split(/\\n+/).map(line=>{
-      const a=line.split('|').map(v=>v.trim());
-      return {name:a[0]||'',arrival:a[1]||'',departure:a[2]||''};
-    }).filter(v=>v.name);
-    state.schedules=schedules;saveState();renderScheduleView();
+    yandexStopsInput.value=(x.rawStopsText||x.stops||[]).map(s=>{
+      if(s.raw)return s.raw;
+      return [s.name||'',s.arrival||'',s.stopTime?formatStopMinutes(s.stopTime):'',s.departure||''].filter(Boolean).join('\n');
+    }).join('\n');
+    yandexStopsInput.scrollIntoView({behavior:'smooth',block:'center'});
+    yandexStopsInput.focus();
   });
 
   const dep=x.departure?scheduleZonedDate(x.date,x.departure,x.timezone||'Europe/Moscow'):null;
@@ -6761,26 +6896,33 @@ async function parseYandexAndSave(){
     return;
   }
 
-  parsed.timezone=scheduleTimezone.value||'Europe/Moscow';
+  parsed.timezone='Europe/Moscow';
 
-  // Сначала сохраняем поезд. Остановки — необязательное дополнение.
-  // Если страницу Яндекса нельзя прочитать, поезд всё равно сохранится.
-  if(parsed.uid){
-    parsed.stops=await loadYandexThreadStops(parsed.sourceUrl);
+  const rawStops=yandexStopsInput.value.trim();
+  parsed.rawStopsText=rawStops;
+
+  if(rawStops){
+    parsed.stops=parseCopiedYandexStops(rawStops);
+    if(!parsed.stops.length){
+      showToast('Не удалось распознать остановки');
+      return;
+    }
+  }else{
+    parsed.stops=[];
   }
 
   const saved=saveSchedule(parsed);
   scheduleFrom.value=saved.fromName||scheduleFrom.value;
   scheduleTo.value=saved.toName||scheduleTo.value;
   scheduleDate.value=saved.date||scheduleDate.value;
-  scheduleTimezone.value=saved.timezone||'Europe/Moscow';
   yandexScheduleLink.value=saved.sourceUrl||yandexScheduleLink.value;
+  yandexStopsInput.value=saved.rawStopsText||rawStops;
   renderScheduleView();
 
   showToast(
     saved.stops?.length
-      ? 'Поезд и остановки сохранены'
-      : 'Поезд сохранён. Остановки не загружены'
+      ? 'Поезд и остановки сохранены: '+saved.stops.length
+      : 'Поезд сохранён без остановок'
   );
 }
 
