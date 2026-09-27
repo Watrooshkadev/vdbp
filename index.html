@@ -6683,10 +6683,10 @@ function renderCurrentSchedule(){
     if(x.sourceUrl)window.open(x.sourceUrl,'_blank');
   });
   document.getElementById('scheduleEditRouteBtn').addEventListener('click',()=>{
-    yandexStopsInput.value=(x.rawStopsText||x.stops||[]).map(s=>{
+    yandexStopsInput.value=x.rawStopsText || (Array.isArray(x.stops)?x.stops.map(s=>{
       if(s.raw)return s.raw;
       return [s.name||'',s.arrival||'',s.stopTime?formatStopMinutes(s.stopTime):'',s.departure||''].filter(Boolean).join('\n');
-    }).join('\n');
+    }).join('\n'):'');
     yandexStopsInput.scrollIntoView({behavior:'smooth',block:'center'});
     yandexStopsInput.focus();
   });
@@ -6709,14 +6709,15 @@ function renderCurrentSchedule(){
     let main='Ожидание отправления';
     let sub='';
 
-    x.stops.forEach((st,i)=>{
+    const routeStops=Array.isArray(x.stops)?x.stops:[];
+    routeStops.forEach((st,i)=>{
       st._status='future';
       const arrival=scheduleZonedDate(x.date,st.arrival,x.timezone||'Europe/Moscow',Number(st.dayOffset)||0);
       const departure=scheduleZonedDate(x.date,st.departure,x.timezone||'Europe/Moscow',Number(st.dayOffset)||0);
       st._arrival=arrival;
       st._departure=departure;
 
-      const nextSt=x.stops[i+1];
+      const nextSt=routeStops[i+1];
       const nextArrival=nextSt?scheduleZonedDate(x.date,nextSt.arrival,x.timezone||'Europe/Moscow',Number(nextSt.dayOffset)||0):null;
 
       if(departure && now2>=departure && nextArrival && now2<nextArrival){
@@ -6736,11 +6737,11 @@ function renderCurrentSchedule(){
       }
     });
 
-    if(current>=0)x.stops[current]._status=mode==='stop'?'current':'past';
-    if(next>=0 && x.stops[next])x.stops[next]._status='next';
+    if(current>=0)routeStops[current]._status=mode==='stop'?'current':'past';
+    if(next>=0 && routeStops[next])routeStops[next]._status='next';
 
     if(current<0 && next<0){
-      const last=x.stops[x.stops.length-1];
+      const last=routeStops[routeStops.length-1];
       if(last && last._arrival && now2>=last._arrival){
         last._status='current';
         main='Маршрут завершён';
@@ -6754,7 +6755,7 @@ function renderCurrentSchedule(){
 
     scheduleStops.querySelectorAll('[data-stop-index]').forEach(el=>{
       const idx=Number(el.dataset.stopIndex);
-      const st=x.stops[idx];
+      const st=routeStops[idx];
       el.classList.remove('past','current','next','future');
       el.classList.add(st?._status||'future');
     });
@@ -6763,11 +6764,11 @@ function renderCurrentSchedule(){
   clearInterval(window.__scheduleTimer);
   window.__scheduleTimer=setInterval(update,1000);
 
-  if(x.stops?.length){
+  if(routeStops.length){
     scheduleStops.hidden=false;
 
     let previousDayLabel='';
-    const rows=x.stops.map((st,i)=>{
+    const rows=routeStops.map((st,i)=>{
       const dayLabel=st.dayLabel||'';
       const dayHeading=(dayLabel && dayLabel!==previousDayLabel)
         ? '<div class="schedule-day-heading">'+escapeHtml(dayLabel)+'</div>'
@@ -6789,7 +6790,7 @@ function renderCurrentSchedule(){
       }
 
       let segment='';
-      if(i<x.stops.length-1){
+      if(i<routeStops.length-1){
         const next=x.stops[i+1];
         const a=scheduleZonedDate(x.date,st.departure,x.timezone||'Europe/Moscow',Number(st.dayOffset)||0);
         const b=scheduleZonedDate(x.date,next.arrival,x.timezone||'Europe/Moscow',Number(next.dayOffset)||0);
