@@ -1540,6 +1540,19 @@
       <input id="scheduleFrom" list="scheduleCities" placeholder="Откуда">
       <input id="scheduleTo" list="scheduleCities" placeholder="Куда">
       <input id="scheduleDate" type="date">
+      <select id="scheduleTimezone">
+        <option value="Europe/Moscow">Москва (МСК, UTC+3)</option>
+        <option value="Europe/Kaliningrad">Калининград (UTC+2)</option>
+        <option value="Europe/Samara">Самара (UTC+4)</option>
+        <option value="Asia/Yekaterinburg">Екатеринбург (UTC+5)</option>
+        <option value="Asia/Omsk">Омск (UTC+6)</option>
+        <option value="Asia/Krasnoyarsk">Красноярск (UTC+7)</option>
+        <option value="Asia/Irkutsk">Иркутск (UTC+8)</option>
+        <option value="Asia/Yakutsk">Якутск (UTC+9)</option>
+        <option value="Asia/Vladivostok">Владивосток (UTC+10)</option>
+        <option value="Asia/Magadan">Магадан (UTC+11)</option>
+        <option value="Asia/Kamchatka">Камчатка (UTC+12)</option>
+      </select>
     </div>
     <datalist id="scheduleCities"></datalist>
     <div class="schedule-actions">
@@ -2006,6 +2019,18 @@
         <div class="help-key">Alt + 6</div>
         <div class="help-desc">
           Отчёт агента.
+        </div>
+      </div>
+      <div class="help-row">
+        <div class="help-key">Alt + 7</div>
+        <div class="help-desc">
+          Заметки.
+        </div>
+      </div>
+      <div class="help-row">
+        <div class="help-key">Alt + 8</div>
+        <div class="help-desc">
+          Расписание.
         </div>
       </div>
 
@@ -6328,6 +6353,7 @@ function saveSchedule(item){
     fromName:item.fromName||'',
     toName:item.toName||'',
     date:item.date||'',
+    timezone:item.timezone||'Europe/Moscow',
     departure:item.departure||'',
     arrival:item.arrival||'',
     stops:Array.isArray(item.stops)?item.stops:[],
@@ -6345,6 +6371,7 @@ function saveSchedule(item){
 function renderScheduleView(){
   renderScheduleCities();
   if(!scheduleDate.value)scheduleDate.value=new Date().toISOString().slice(0,10);
+  if(!scheduleTimezone.value)scheduleTimezone.value='Europe/Moscow';
   renderSavedSchedules();
   renderCurrentSchedule();
 }
@@ -6379,10 +6406,40 @@ function renderSavedSchedules(){
   });
 }
 
-function scheduleStopDate(stop,baseDate){
+function scheduleZoneOffsetMinutes(date,timezone){
+  try{
+    const parts=new Intl.DateTimeFormat('en-US',{
+      timeZone:timezone,
+      timeZoneName:'longOffset',
+      hour:'2-digit',
+      minute:'2-digit',
+      hour12:false
+    }).formatToParts(date);
+    const z=parts.find(p=>p.type==='timeZoneName')?.value||'GMT+00:00';
+    const m=z.match(/GMT([+-])(\d{2})(?::?(\d{2}))?/);
+    if(!m)return 0;
+    const mins=Number(m[2])*60+Number(m[3]||0);
+    return (m[1]==='-'?-1:1)*mins;
+  }catch(e){return 180;}
+}
+
+function scheduleZonedDate(date,time,timezone){
+  if(!date||!time)return null;
+  const t=String(time).match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if(!t)return null;
+  const utcGuess=Date.UTC(
+    Number(date.slice(0,4)),
+    Number(date.slice(5,7))-1,
+    Number(date.slice(8,10)),
+    Number(t[1]),Number(t[2]),Number(t[3]||0)
+  );
+  const offset=scheduleZoneOffsetMinutes(new Date(utcGuess),timezone||'Europe/Moscow');
+  return new Date(utcGuess-offset*60000);
+}
+
+function scheduleStopDate(stop,baseDate,timezone){
   if(!stop.time)return null;
-  const d=new Date((baseDate||'1970-01-01')+'T'+stop.time+':00');
-  return Number.isNaN(d.getTime())?null:d;
+  return scheduleZonedDate(baseDate,stop.time,timezone||'Europe/Moscow');
 }
 
 function renderCurrentSchedule(){
@@ -6426,8 +6483,8 @@ function renderCurrentSchedule(){
     state.schedules=schedules;saveState();renderScheduleView();
   });
 
-  const dep=x.departure?new Date(x.departure.replace(' ','T')):null;
-  const arr=x.arrival?new Date(x.arrival.replace(' ','T')):null;
+  const dep=x.departure?scheduleZonedDate(x.date,x.departure,x.timezone||'Europe/Moscow'):null;
+  const arr=x.arrival?scheduleZonedDate(x.date,x.arrival,x.timezone||'Europe/Moscow'):null;
   const now=new Date();
   const depEl=document.getElementById('scheduleDepartureTimer');
   const arrEl=document.getElementById('scheduleArrivalTimer');
@@ -6465,8 +6522,8 @@ function renderCurrentSchedule(){
     scheduleStops.innerHTML=
       '<div class="schedule-stop schedule-stop-head"><div>Остановка</div><div>Прибытие</div><div>Отправление</div><div>Стоянка</div></div>'+
       x.stops.map((st,i)=>{
-        const a=st.arrival?new Date(baseDateTime(x.date,st.arrival)):null;
-        const d=st.departure?new Date(baseDateTime(x.date,st.departure)):null;
+        const a=st.arrival?scheduleZonedDate(x.date,st.arrival,x.timezone||'Europe/Moscow'):null;
+        const d=st.departure?scheduleZonedDate(x.date,st.departure,x.timezone||'Europe/Moscow'):null;
         const stand=a&&d?formatDuration(d-a):'—';
         return '<div class="schedule-stop" data-stop-index="'+i+'"><div>'+escapeHtml(st.name)+'</div><div class="mono">'+escapeHtml(st.arrival||'—')+'</div><div class="mono">'+escapeHtml(st.departure||'—')+'</div><div class="mono">'+stand+'</div></div>';
       }).join('');
@@ -6486,10 +6543,12 @@ function parseYandexAndSave(){
     showToast('Не удалось распознать ссылку Яндекс');
     return;
   }
+  parsed.timezone=scheduleTimezone.value||'Europe/Moscow';
   const saved=saveSchedule(parsed);
   scheduleFrom.value=saved.fromName||scheduleFrom.value;
   scheduleTo.value=saved.toName||scheduleTo.value;
   scheduleDate.value=saved.date||scheduleDate.value;
+  scheduleTimezone.value=saved.timezone||'Europe/Moscow';
   yandexScheduleLink.value=saved.sourceUrl||yandexScheduleLink.value;
   renderScheduleView();
   showToast('Поезд сохранён. Он доступен офлайн');
