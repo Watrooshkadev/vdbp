@@ -6471,7 +6471,7 @@ function parseCopiedYandexStops(raw){
         else arrival=following[0];
       }
 
-      result.push({name:station,arrival,departure,stopTime,dayOffset:currentDay,dayLabel:currentDayLabel});
+      result.push({name:station,arrival,departure,stopTime,dayOffset:currentDay,dayLabel:currentDayLabel,timezoneOffsetMinutes:currentTimezoneOffset,timezoneLabel:currentTimezoneLabel});
       i=j;
     }else{
       i++;
