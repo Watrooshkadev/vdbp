@@ -6325,7 +6325,10 @@ function isScheduleTime(v){
 }
 
 function isScheduleDuration(v){
-  return /^\d+\s*(?:мин|м|ч|час(?:а|ов)?)(?:\s*\d+\s*мин)?$/i.test(String(v||'').trim());
+  const s=String(v||'').trim().toLowerCase().replace(/ё/g,'е');
+  // Яндекс может вставлять: «33 мин», «1 ч 18 мин», «1 дн 8 ч»,
+  // «2 дн 3 ч», а также варианты с «час/часа/часов».
+  return /^\d+\s*(?:мин(?:ут(?:а|ы)?)?|м|ч|час(?:а|ов)?|дн(?:\.?|ей|я)?)(?:\s+\d+\s*(?:мин(?:ут(?:а|ы)?)?|м|ч|час(?:а|ов)?|дн(?:\.?|ей|я)?))*$/i.test(s);
 }
 
 function isScheduleDateHeading(v){
@@ -6336,9 +6339,18 @@ function isScheduleNoise(v){
   const s=String(v||'').trim();
   if(!s || s==='—' || s==='–' || s==='-') return true;
   if(isScheduleTime(s) || isScheduleDuration(s) || isScheduleDateHeading(s)) return true;
-  if(/^\d+\s*км\*?$/i.test(s)) return true;
-  if(/^мск\s*[+-]\s*\d+\s*ч$/i.test(s)) return true;
-  if(/^московское время$/i.test(s)) return true;
+
+  // Расстояние между станциями/до станции, которое Яндекс вставляет в копируемый текст.
+  if(/^\d+(?:[.,]\d+)?\s*км\*?$/i.test(s)) return true;
+
+  // Часовые пояса: «МСК +1 ч», «Местное время МСК +1 ч» и подобные строки.
+  if(/^(?:местное\s+время\s+)?(?:московское\s+время\s+)?мск\s*[+-]\s*\d+\s*ч(?:ас(?:а|ов)?)?$/i.test(s)) return true;
+  if(/^местное\s+время$/i.test(s)) return true;
+  if(/^московское\s+время$/i.test(s)) return true;
+
+  // Если при копировании захватились служебные строки Яндекса.
+  if(/^(?:время\s+в\s+пути|в\s+пути|расстояние|перегон)\b/i.test(s)) return true;
+
   return false;
 }
 
