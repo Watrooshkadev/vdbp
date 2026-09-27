@@ -6620,14 +6620,16 @@ function scheduleZoneOffsetMinutes(date,timezone){
   }catch(e){return 180;}
 }
 
-function scheduleZonedDate(date,time,timezone){
+function scheduleZonedDate(date,time,timezone,dayOffset=0){
   if(!date||!time)return null;
   const t=String(time).match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/);
   if(!t)return null;
+  const base=new Date(Date.UTC(Number(date.slice(0,4)),Number(date.slice(5,7))-1,Number(date.slice(8,10)));
+  base.setUTCDate(base.getUTCDate()+Number(dayOffset||0));
   const utcGuess=Date.UTC(
-    Number(date.slice(0,4)),
-    Number(date.slice(5,7))-1,
-    Number(date.slice(8,10)),
+    base.getUTCFullYear(),
+    base.getUTCMonth(),
+    base.getUTCDate(),
     Number(t[1]),Number(t[2]),Number(t[3]||0)
   );
   const offset=scheduleZoneOffsetMinutes(new Date(utcGuess),timezone||'Europe/Moscow');
@@ -6635,8 +6637,10 @@ function scheduleZonedDate(date,time,timezone){
 }
 
 function scheduleStopDate(stop,baseDate,timezone){
-  if(!stop.time)return null;
-  return scheduleZonedDate(baseDate,stop.time,timezone||'Europe/Moscow');
+  if(!stop)return null;
+  const time=stop.time||stop.arrival||stop.departure;
+  if(!time)return null;
+  return scheduleZonedDate(baseDate,time,timezone||'Europe/Moscow',Number(stop.dayOffset)||0);
 }
 
 function renderCurrentSchedule(){
