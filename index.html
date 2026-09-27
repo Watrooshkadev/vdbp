@@ -6690,14 +6690,41 @@ function renderCurrentSchedule(){
 
   if(x.stops?.length){
     scheduleStops.hidden=false;
+
+    let previousDayLabel='';
+    const rows=x.stops.map((st,i)=>{
+      const dayLabel=st.dayLabel||'';
+      const dayHeading=(dayLabel && dayLabel!==previousDayLabel)
+        ? '<div class="schedule-day-heading">'+escapeHtml(dayLabel)+'</div>'
+        : '';
+      if(dayLabel) previousDayLabel=dayLabel;
+
+      let stand=String(st.stopTime||'').trim();
+
+      // Для старых записей, где стоянка не сохранилась, рассчитываем её.
+      if(!stand && st.arrival && st.departure){
+        const aa=scheduleZonedDate(x.date,st.arrival,x.timezone||'Europe/Moscow');
+        const dd=scheduleZonedDate(x.date,st.departure,x.timezone||'Europe/Moscow');
+        if(aa&&dd){
+          const mins=Math.max(0,Math.round((dd-aa)/60000));
+          stand=mins>=60
+            ? Math.floor(mins/60)+' ч'+(mins%60?' '+mins%60+' мин':'')
+            : mins+' мин';
+        }
+      }
+
+      return dayHeading+
+        '<div class="schedule-stop" data-stop-index="'+i+'">'+
+          '<div>'+escapeHtml(st.name)+'</div>'+
+          '<div class="mono">'+escapeHtml(st.arrival||'—')+'</div>'+
+          '<div class="mono">'+escapeHtml(stand||'—')+'</div>'+
+          '<div class="mono">'+escapeHtml(st.departure||'—')+'</div>'+
+        '</div>';
+    }).join('');
+
     scheduleStops.innerHTML=
-      '<div class="schedule-stop schedule-stop-head"><div>Остановка</div><div>Прибытие</div><div>Отправление</div><div>Стоянка</div></div>'+
-      x.stops.map((st,i)=>{
-        const a=st.arrival?scheduleZonedDate(x.date,st.arrival,x.timezone||'Europe/Moscow'):null;
-        const d=st.departure?scheduleZonedDate(x.date,st.departure,x.timezone||'Europe/Moscow'):null;
-        const stand=a&&d?formatDuration(d-a):'—';
-        return '<div class="schedule-stop" data-stop-index="'+i+'"><div>'+escapeHtml(st.name)+'</div><div class="mono">'+escapeHtml(st.arrival||'—')+'</div><div class="mono">'+escapeHtml(st.departure||'—')+'</div><div class="mono">'+stand+'</div></div>';
-      }).join('');
+      '<div class="schedule-stop schedule-stop-head"><div>Остановка</div><div>Прибытие</div><div>Стоянка</div><div>Отправление</div></div>'+
+      rows;
   }else{
     scheduleStops.hidden=true;
   }
