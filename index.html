@@ -1364,7 +1364,7 @@
     <small id="dateLine"></small>
   </div>
 
-  <div class="topbar-right" id="topbarRight"><span id="appVersion" class="app-version">v1.0.2</span></div>
+  <div class="topbar-right" id="topbarRight"><span id="appVersion" class="app-version">v1.0.3</span></div>
 </div>
 
 <!-- ================= SEARCH ================= -->
@@ -2907,7 +2907,7 @@ function renderMain(){
   titleInput.hidden = true;
   staticTitle.hidden = true;
 
-  topbarRight.innerHTML = '<span class="app-version">v1.0.2</span>';
+  topbarRight.innerHTML = '<span class="app-version">v1.0.3</span>';
 
   if(mainView === 'wagon'){
 
@@ -2923,7 +2923,7 @@ function renderMain(){
       staticTitle.textContent =
         'Вагоны';
 
-      topbarRight.innerHTML='<span class="app-version">v1.0.2</span>';
+      topbarRight.innerHTML='<span class="app-version">v1.0.3</span>';
       renderSidebar();
 
       return;
@@ -3142,7 +3142,7 @@ function renderMain(){
   }
 
   if(!topbarRight.querySelector('.app-version')){
-    topbarRight.insertAdjacentHTML('beforeend','<span class="app-version">v1.0.2</span>');
+    topbarRight.insertAdjacentHTML('beforeend','<span class="app-version">v1.0.3</span>');
   }
 
   renderSidebar();
@@ -6365,7 +6365,8 @@ function parseCopiedYandexStops(raw){
   let i=0;
   let currentDay=0;
   let currentDayLabel='';
-  let sawMoscowTime=false;
+  let currentTimezoneOffset=0;
+  let currentTimezoneLabel='Московское время';
 
   while(i<lines.length){
     const name=lines[i];
@@ -6376,8 +6377,22 @@ function parseCopiedYandexStops(raw){
       i++;
       continue;
     }
-    if(/^московское время$/i.test(name)){
-      sawMoscowTime=true;
+    const localTz=name.match(/^местное\s+время\s+мск\s*([+-])\s*(\d+)\s*ч/i);
+    if(localTz){
+      currentTimezoneOffset=(localTz[1]==='-'?-1:1)*Number(localTz[2])*60;
+      currentTimezoneLabel='Местное время · МСК '+(localTz[1]==='-'?'-':'+')+Number(localTz[2])+' ч';
+      i++;
+      continue;
+    }
+    if(/^местное\s+время$/i.test(name)){
+      currentTimezoneOffset=0;
+      currentTimezoneLabel='Местное время';
+      i++;
+      continue;
+    }
+    if(/^московское\s+время$/i.test(name)){
+      currentTimezoneOffset=0;
+      currentTimezoneLabel='Московское время';
       i++;
       continue;
     }
@@ -6397,7 +6412,11 @@ function parseCopiedYandexStops(raw){
           departure:isScheduleTime(p[2])?p[2]:'',
           stopTime:p[3]||'',
           dayOffset:currentDay,
-          dayLabel:currentDayLabel
+          dayLabel:currentDayLabel,
+          timezoneOffsetMinutes:currentTimezoneOffset,
+          timezoneLabel:currentTimezoneLabel,
+          timezoneOffsetMinutes:currentTimezoneOffset,
+          timezoneLabel:currentTimezoneLabel
         });
       }
       i++;
@@ -6457,7 +6476,7 @@ function parseCopiedYandexStops(raw){
     }
   }
 
-  result.timezoneLabel=sawMoscowTime?'Московское время':'Время из скопированного расписания';
+  result.timezoneLabel=result.some(s=>s.timezoneOffsetMinutes!==0) ? 'Время по маршруту · часовой пояс меняется' : 'Московское время';
   return result;
 }
 
@@ -6642,7 +6661,7 @@ function scheduleZoneOffsetMinutes(date,timezone){
   }catch(e){return 180;}
 }
 
-function scheduleZonedDate(date,time,timezone,dayOffset=0){
+function scheduleZonedDate(date,time,timezone,dayOffset=0,offsetOverride=null){
   if(!date||!time)return null;
   const t=String(time).match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/);
   if(!t)return null;
@@ -6654,7 +6673,7 @@ function scheduleZonedDate(date,time,timezone,dayOffset=0){
     base.getUTCDate(),
     Number(t[1]),Number(t[2]),Number(t[3]||0)
   );
-  const offset=scheduleZoneOffsetMinutes(new Date(utcGuess),timezone||'Europe/Moscow');
+  const offset=offsetOverride!==null && offsetOverride!==undefined ? Number(offsetOverride) : scheduleZoneOffsetMinutes(new Date(utcGuess),timezone||'Europe/Moscow');
   return new Date(utcGuess-offset*60000);
 }
 
@@ -6678,7 +6697,7 @@ function renderCurrentSchedule(){
   scheduleCurrent.innerHTML=`
     <h3>${escapeHtml(x.trainNumber?'Поезд '+x.trainNumber:'Сохранённый поезд')}</h3>
     <div class="schedule-route">${escapeHtml(x.fromName||'—')} → ${escapeHtml(x.toName||'—')} · ${escapeHtml(x.date||'')}</div>
-    <div class="schedule-timezone">🕐 ${escapeHtml(x.timezoneLabel||'Московское время')}</div>
+    <div class="schedule-timezone">🕐 ${escapeHtml(x.timezoneLabel||'Время по маршруту · часовой пояс меняется')}</div>
     <div id="scheduleStatus" class="schedule-status"><b>Определяем положение поезда…</b><small>Время обновляется автоматически</small></div>
     <div class="schedule-timers">
       <div class="schedule-timer"><span>Сейчас</span><b id="scheduleNowTimer">—</b></div>
@@ -6728,8 +6747,8 @@ function renderCurrentSchedule(){
 
     routeStops.forEach((st,i)=>{
       st._status='future';
-      const arrival=scheduleZonedDate(x.date,st.arrival,x.timezone||'Europe/Moscow',Number(st.dayOffset)||0);
-      const departure=scheduleZonedDate(x.date,st.departure,x.timezone||'Europe/Moscow',Number(st.dayOffset)||0);
+      const arrival=scheduleZonedDate(x.date,st.arrival,x.timezone||'Europe/Moscow',Number(st.dayOffset)||0,Number(st.timezoneOffsetMinutes||0));
+      const departure=scheduleZonedDate(x.date,st.departure,x.timezone||'Europe/Moscow',Number(st.dayOffset)||0,Number(st.timezoneOffsetMinutes||0));
       st._arrival=arrival;
       st._departure=departure;
     });
@@ -6866,12 +6885,18 @@ function renderCurrentSchedule(){
         : '';
       if(dayLabel) previousDayLabel=dayLabel;
 
+      const zoneLabel=st.timezoneLabel||'Московское время';
+      const previousZone=i>0?(routeStops[i-1].timezoneLabel||'Московское время'):'';
+      const zoneHeading=zoneLabel!==previousZone
+        ? '<div class="schedule-zone-heading"><span>🕐 '+escapeHtml(zoneLabel)+'</span></div>'
+        : '';
+
       let stand=String(st.stopTime||'').trim();
 
       // Для старых записей, где стоянка не сохранилась, рассчитываем её.
       if(!stand && st.arrival && st.departure){
-        const aa=scheduleZonedDate(x.date,st.arrival,x.timezone||'Europe/Moscow',Number(st.dayOffset)||0);
-        const dd=scheduleZonedDate(x.date,st.departure,x.timezone||'Europe/Moscow',Number(st.dayOffset)||0);
+        const aa=scheduleZonedDate(x.date,st.arrival,x.timezone||'Europe/Moscow',Number(st.dayOffset)||0,Number(st.timezoneOffsetMinutes||0));
+        const dd=scheduleZonedDate(x.date,st.departure,x.timezone||'Europe/Moscow',Number(st.dayOffset)||0,Number(st.timezoneOffsetMinutes||0));
         if(aa&&dd){
           const mins=Math.max(0,Math.round((dd-aa)/60000));
           stand=mins>=60
@@ -6883,15 +6908,15 @@ function renderCurrentSchedule(){
       let segment='';
       if(i<routeStops.length-1){
         const next=routeStops[i+1];
-        const a=scheduleZonedDate(x.date,st.departure,x.timezone||'Europe/Moscow',Number(st.dayOffset)||0);
-        const b=scheduleZonedDate(x.date,next.arrival,x.timezone||'Europe/Moscow',Number(next.dayOffset)||0);
+        const a=scheduleZonedDate(x.date,st.departure,x.timezone||'Europe/Moscow',Number(st.dayOffset)||0,Number(st.timezoneOffsetMinutes||0));
+        const b=scheduleZonedDate(x.date,next.arrival,x.timezone||'Europe/Moscow',Number(next.dayOffset)||0,Number(next.timezoneOffsetMinutes||0));
         if(a&&b){
           const mins=Math.max(0,Math.round((b-a)/60000));
           const travel=mins>=60?Math.floor(mins/60)+' ч'+(mins%60?' '+mins%60+' мин':''):mins+' мин';
           segment='<div class="schedule-segment">Перегон <b>'+escapeHtml(travel)+'</b></div>';
         }
       }
-      return dayHeading+
+      return dayHeading+zoneHeading+
         '<div class="schedule-stop future" data-stop-index="'+i+'">'+
           '<div>'+escapeHtml(st.name)+'</div>'+
           '<div class="mono">'+escapeHtml(st.arrival||'—')+'</div>'+
@@ -8223,7 +8248,7 @@ if('serviceWorker' in navigator){
     () => {
 
       navigator.serviceWorker
-        .register('sw.js?v=14')
+        .register('sw.js?v=15')
         .catch(() => {});
 
     }
