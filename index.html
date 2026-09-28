@@ -6890,6 +6890,20 @@ function scheduleStopDate(stop,baseDate,timezone){
   return scheduleZonedDate(baseDate,time,timezone||'Europe/Moscow',Number(stop.dayOffset)||0);
 }
 
+function scheduleStationOffsetMinutes(stop){
+  if(!stop)return 180;
+  const label=String(stop.timezoneLabel||'').trim().toLowerCase();
+  const local=label.match(/мск\s*([+-])\s*(\d+)\s*ч/i);
+  if(local){
+    return 180+(local[1]==='-'?-1:1)*Number(local[2])*60;
+  }
+  if(/московское\s+время/i.test(label) || /^местное\s+время$/i.test(label)){
+    return 180;
+  }
+  const stored=Number(stop.timezoneOffsetMinutes);
+  return Number.isFinite(stored) && stored!==0 ? stored : 180;
+}
+
 function renderCurrentSchedule(){
   const x=schedules.find(s=>s.id===currentScheduleId)||schedules[0];
   if(!x){
@@ -7115,8 +7129,8 @@ function renderCurrentSchedule(){
       let segment='';
       if(i<routeStops.length-1){
         const next=routeStops[i+1];
-        const a=scheduleZonedDate(x.date,st.departure,x.timezone||'Europe/Moscow',Number(st.dayOffset)||0,(st.timezoneOffsetMinutes==null || (Number(st.timezoneOffsetMinutes)===0 && /московское время/i.test(String(st.timezoneLabel||''))) ? null : Number(st.timezoneOffsetMinutes)));
-        const b=scheduleZonedDate(x.date,next.arrival,x.timezone||'Europe/Moscow',Number(next.dayOffset)||0,(next.timezoneOffsetMinutes==null || (Number(next.timezoneOffsetMinutes)===0 && /московское время/i.test(String(next.timezoneLabel||''))) ? null : Number(next.timezoneOffsetMinutes)));
+        const a=scheduleZonedDate(x.date,st.departure,x.timezone||'Europe/Moscow',Number(st.dayOffset)||0,scheduleStationOffsetMinutes(st));
+        const b=scheduleZonedDate(x.date,next.arrival,x.timezone||'Europe/Moscow',Number(next.dayOffset)||0,scheduleStationOffsetMinutes(next));
         if(a&&b){
           const mins=Math.max(0,Math.round((b-a)/60000));
           const travel=mins>=60?Math.floor(mins/60)+' ч'+(mins%60?' '+mins%60+' мин':''):mins+' мин';
