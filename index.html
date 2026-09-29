@@ -1255,6 +1255,26 @@
     flex:1;
   }
 
+  .issue-search-wrap{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+
+  .issue-search-input{
+    width:100%;
+  }
+
+  .issue-search-hint{
+    font-size:10px;
+    color:var(--ink-muted);
+    min-height:14px;
+  }
+
+  #issueCatalogSelect{
+    max-height:220px;
+  }
+
   .modal-hint{
     font-size:11px;
     color:var(--ink-muted);
@@ -1442,7 +1462,7 @@
     <small id="dateLine"></small>
   </div>
 
-  <div class="topbar-right" id="topbarRight"><span id="appVersion" class="app-version">v1.2.3</span></div>
+  <div class="topbar-right" id="topbarRight"><span id="appVersion" class="app-version">v1.2.4</span></div>
 </div>
 
 <!-- ================= SEARCH ================= -->
@@ -1866,6 +1886,19 @@
     </div>
 
     <form id="addForm">
+
+      <div class="issue-search-wrap">
+        <input
+          id="issueCatalogSearch"
+          class="issue-search-input"
+          type="search"
+          placeholder="Поиск товара…"
+          autocomplete="off"
+          enterkeyhint="search"
+          aria-label="Поиск товара"
+        >
+        <div id="issueSearchHint" class="issue-search-hint" aria-live="polite"></div>
+      </div>
 
       <select
         name="catalogId"
@@ -4303,12 +4336,78 @@ const issueEmptyHint =
     'issueEmptyHint'
   );
 
+const issueCatalogSearch =
+  document.getElementById(
+    'issueCatalogSearch'
+  );
+
+const issueSearchHint =
+  document.getElementById(
+    'issueSearchHint'
+  );
+
 const issueSubmitBtn =
   document.getElementById(
     'issueSubmitBtn'
   );
 
 let issueTargetWagonId = null;
+
+function renderIssueCatalogOptions(query = ''){
+
+  const normalized =
+    query.trim().toLocaleLowerCase('ru-RU');
+
+  const currentId =
+    issueCatalogSelect.value;
+
+  const filtered =
+    catalog.filter(c =>
+      !normalized ||
+      String(c.name || '')
+        .toLocaleLowerCase('ru-RU')
+        .includes(normalized)
+    );
+
+  issueCatalogSelect.innerHTML =
+    filtered
+      .map(c =>
+        '<option value="' + c.id + '">' +
+          escapeHtml(c.name) +
+          ' — ' + money(c.price || 0) +
+        '</option>'
+      )
+      .join('');
+
+  issueCatalogSelect.disabled =
+    filtered.length === 0;
+
+  issueSubmitBtn.disabled =
+    filtered.length === 0;
+
+  if(filtered.length){
+    const stillSelected =
+      filtered.some(c => c.id === currentId);
+
+    issueCatalogSelect.value =
+      stillSelected
+        ? currentId
+        : filtered[0].id;
+  }
+
+  if(normalized){
+    issueSearchHint.textContent =
+      filtered.length
+        ? 'Найдено: ' + filtered.length + ' из ' + catalog.length
+        : 'Ничего не найдено';
+  }else{
+    issueSearchHint.textContent =
+      catalog.length > 1
+        ? 'Товаров в каталоге: ' + catalog.length
+        : '';
+  }
+
+}
 
 function openAddModal(wagonId){
 
@@ -4317,6 +4416,12 @@ function openAddModal(wagonId){
     currentWagonId;
 
   if(!catalog.length){
+
+    issueCatalogSearch.hidden =
+      true;
+
+    issueCatalogSearch.value =
+      '';
 
     issueCatalogSelect.hidden =
       true;
@@ -4335,6 +4440,9 @@ function openAddModal(wagonId){
 
   }else{
 
+    issueCatalogSearch.hidden =
+      false;
+
     issueCatalogSelect.hidden =
       false;
 
@@ -4350,28 +4458,21 @@ function openAddModal(wagonId){
     issueSubmitBtn.hidden =
       false;
 
-    issueCatalogSelect.innerHTML =
-      catalog
-        .map(
-          c =>
-            `<option value="${c.id}">
-              ${escapeHtml(c.name)}
-              — ${money(c.price || 0)}
-            </option>`
-        )
-        .join('');
-
   }
 
   addOverlay.hidden = false;
 
   addForm.reset();
 
+  if(catalog.length){
+    renderIssueCatalogOptions();
+  }
+
   setTimeout(
     () => {
 
-      if(!issueCatalogSelect.hidden){
-        issueCatalogSelect.focus();
+      if(!issueCatalogSearch.hidden){
+        issueCatalogSearch.focus();
       }else{
         document
           .getElementById(
@@ -4392,6 +4493,23 @@ function closeAddModal(){
     true;
 
 }
+
+issueCatalogSearch.addEventListener(
+  'input',
+  () => renderIssueCatalogOptions(issueCatalogSearch.value)
+);
+
+issueCatalogSearch.addEventListener(
+  'keydown',
+  e => {
+    if(e.key === 'Enter'){
+      e.preventDefault();
+      if(!issueCatalogSelect.disabled){
+        issueCatalogSelect.focus();
+      }
+    }
+  }
+);
 
 cancelAddBtn.addEventListener(
   'click',
