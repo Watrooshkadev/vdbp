@@ -1149,12 +1149,26 @@
   .schedule-timer span{display:block;color:var(--ink-muted);font-size:10px;margin-bottom:3px;text-transform:uppercase;}
   .schedule-timer b{font-family:ui-monospace,monospace;font-size:18px;}
   .schedule-stops{border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:auto;}
-  .schedule-stop{display:grid;grid-template-columns:1fr 85px 85px 100px;gap:8px;padding:9px 11px;border-bottom:1px solid var(--line);align-items:center;font-size:12px;}
+  .schedule-stop{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 78px 78px 92px;
+    gap:8px;
+    padding:12px 12px 11px;
+    border-bottom:1px solid var(--line);
+    align-items:center;
+    font-size:12px;
+    min-height:58px;
+  }
   .schedule-stop:last-child{border-bottom:0;}
+  .schedule-stop>div:first-child{min-width:0;line-height:1.25;}
   .schedule-stop.current{background:var(--surface-2);color:var(--amber);}
   .schedule-timezone{font-size:11px;font-weight:600;color:var(--amber);margin:3px 0 8px;}
-  .schedule-zone-heading{display:flex;justify-content:flex-start;padding:7px 10px 5px;background:var(--surface-2);border-bottom:1px solid var(--line);border-top:1px solid var(--line);}
-  .schedule-zone-heading span{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.03em;color:var(--amber);border:1px solid var(--amber);border-radius:6px;padding:3px 7px;}
+  .schedule-zone-heading{display:flex;justify-content:flex-start;padding:8px 12px;background:var(--surface-2);border-bottom:1px solid var(--line);}
+  .schedule-zone-heading span{
+    display:inline-flex;align-items:center;gap:5px;
+    font-size:10px;font-weight:800;letter-spacing:.03em;color:var(--amber);
+    border:1px solid var(--amber);border-radius:999px;padding:4px 8px;
+  }
   .schedule-status{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:9px;}
   .schedule-status b{font-size:15px;}
   .schedule-status small{display:block;color:var(--ink-muted);margin-top:3px;}
@@ -1175,10 +1189,62 @@
   .schedule-past-toggle.open .past-arrow{transform:rotate(180deg);}
   .schedule-stop-group.past-collapsed{display:none;}
   .schedule-past-toggle[hidden]{display:none;}
-  .schedule-technical-badge{display:inline-block;margin-left:6px;padding:2px 5px;border:1px solid var(--amber-dim);border-radius:5px;color:var(--amber);font-size:9px;font-weight:800;letter-spacing:.03em;vertical-align:middle;white-space:nowrap;}
-  .schedule-segment{padding:5px 11px 7px;color:var(--ink-muted);font-size:11px;text-align:center;border-bottom:1px solid var(--line);}
-  .schedule-segment b{color:var(--teal);font-weight:600;}
-  .schedule-stop-head{color:var(--ink-muted);font-size:10px;text-transform:uppercase;}
+  .schedule-technical-badge{
+    display:table;
+    margin:5px 0 0;
+    padding:3px 7px;
+    border:1px solid var(--amber-dim);
+    border-radius:7px;
+    color:var(--amber);
+    background:rgba(255,180,50,.06);
+    font-size:9px;font-weight:800;letter-spacing:.03em;
+    white-space:nowrap;
+  }
+  .schedule-notify{
+    display:flex;
+    gap:4px;
+    margin-top:6px;
+  }
+  .schedule-notify-btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:2px;
+    min-width:40px;
+    height:26px;
+    padding:0 6px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    background:var(--surface-2);
+    color:var(--ink-muted);
+    font-size:10px;
+    line-height:1;
+    cursor:pointer;
+    transition:background .15s,border-color .15s,color .15s,transform .1s;
+  }
+  .schedule-notify-btn:active{transform:scale(.96);}
+  .schedule-notify-btn.active{
+    border-color:var(--amber);
+    background:rgba(255,180,50,.12);
+    color:var(--amber);
+  }
+  .schedule-segment{
+    padding:7px 12px;
+    color:var(--ink-muted);
+    font-size:10px;
+    text-align:center;
+    border-bottom:1px solid var(--line);
+    background:rgba(255,255,255,.012);
+  }
+  .schedule-segment b{color:var(--teal);font-weight:700;}
+  .schedule-stop-head{
+    color:var(--ink-muted);
+    font-size:9px;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    padding-top:10px;
+    padding-bottom:10px;
+  }
   .schedule-day-heading{padding:9px 11px 5px;color:var(--ink-muted);font-size:11px;font-weight:700;border-bottom:1px solid var(--line);background:var(--surface-2);}
   .schedule-saved{display:flex;flex-direction:column;gap:7px;margin-bottom:12px;}
   .schedule-card{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:10px;}
@@ -1199,7 +1265,14 @@
     .schedule-top-status{max-width:44vw;padding:4px 6px;font-size:9px;}
     .schedule-top-status .sts-dot{width:7px;height:7px;}
     .app-version{font-size:9px;margin-left:2px;}
-    .schedule-stop{grid-template-columns:1fr 65px 65px 80px;}
+    .schedule-stop{
+      grid-template-columns:minmax(0,1fr) 58px 58px 68px;
+      gap:5px;
+      padding:11px 10px;
+      font-size:11px;
+    }
+    .schedule-notify-btn{min-width:38px;height:25px;padding:0 5px;}
+    .schedule-zone-heading{padding:7px 10px;}
   }
 
   /* ---------- Modals ---------- */
@@ -1474,7 +1547,7 @@
     <small id="dateLine"></small>
   </div>
 
-  <div class="topbar-right" id="topbarRight"><span id="appVersion" class="app-version">v1.2.6</span></div>
+  <div class="topbar-right" id="topbarRight"><span id="appVersion" class="app-version">v1.2.7</span></div>
 </div>
 
 <!-- ================= SEARCH ================= -->
@@ -3071,7 +3144,7 @@ function renderMain(){
   titleInput.hidden = true;
   staticTitle.hidden = true;
 
-  topbarRight.innerHTML = '<span class="app-version">v1.2.6</span>';
+  topbarRight.innerHTML = '<span class="app-version">v1.2.7</span>';
 
   if(mainView === 'wagons'){
 
@@ -3102,7 +3175,7 @@ function renderMain(){
       staticTitle.textContent =
         'Вагоны';
 
-      topbarRight.innerHTML='<span class="app-version">v1.2.6</span>';
+      topbarRight.innerHTML='<span class="app-version">v1.2.7</span>';
       renderSidebar();
 
       return;
@@ -3349,7 +3422,7 @@ function renderMain(){
   }
 
   if(!topbarRight.querySelector('.app-version')){
-    topbarRight.insertAdjacentHTML('beforeend','<span class="app-version">v1.2.6</span>');
+    topbarRight.insertAdjacentHTML('beforeend','<span class="app-version">v1.2.7</span>');
   }
 
   renderSidebar();
@@ -7221,6 +7294,19 @@ function renderCurrentSchedule(){
         if(arrival && now2>=arrival) st._status='past';
       }
 
+      // Стартовая станция обычно не имеет времени прибытия.
+      // После её отправления она тоже должна считаться прошедшей.
+      routeStops.forEach(st=>{
+        if(
+          st._status!=='current' &&
+          st._status!=='next' &&
+          st._departure &&
+          now2>=st._departure
+        ){
+          st._status='past';
+        }
+      });
+
       if(current<0 && next<0){
         const last=routeStops[routeStops.length-1];
         if(last && last._arrival && now2>=last._arrival){
@@ -8888,7 +8974,7 @@ if('serviceWorker' in navigator){
         b.dataset.notifyMinutes=m;
         b.setAttribute('aria-pressed',active?'true':'false');
         b.title='Напомнить за '+m+' минут';
-        b.textContent='🔔 '+m;
+        b.innerHTML='<span aria-hidden="true">🔔</span><span>'+m+'</span>';
         wrap.appendChild(b);
       });
       name.appendChild(wrap);
