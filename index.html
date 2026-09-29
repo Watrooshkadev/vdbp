@@ -1163,6 +1163,18 @@
   .schedule-stop.next{background:var(--amber-dim);color:var(--ink);}
   .schedule-stop.future{opacity:.95;}
   .schedule-stop[data-stop-index]{scroll-margin-top:86px;}
+  .schedule-past-toggle{
+    display:flex;align-items:center;justify-content:space-between;width:100%;
+    padding:8px 11px;border:0;border-bottom:1px solid var(--line);
+    background:var(--surface-2);color:var(--ink-muted);
+    font:600 11px/1.2 inherit;text-align:left;cursor:pointer;
+  }
+  .schedule-past-toggle:hover{color:var(--ink);}
+  .schedule-past-toggle .past-count{color:var(--amber);}
+  .schedule-past-toggle .past-arrow{font-size:12px;transition:transform .15s ease;}
+  .schedule-past-toggle.open .past-arrow{transform:rotate(180deg);}
+  .schedule-stop-group.past-collapsed{display:none;}
+  .schedule-past-toggle[hidden]{display:none;}
   .schedule-technical-badge{display:inline-block;margin-left:6px;padding:2px 5px;border:1px solid var(--amber-dim);border-radius:5px;color:var(--amber);font-size:9px;font-weight:800;letter-spacing:.03em;vertical-align:middle;white-space:nowrap;}
   .schedule-segment{padding:5px 11px 7px;color:var(--ink-muted);font-size:11px;text-align:center;border-bottom:1px solid var(--line);}
   .schedule-segment b{color:var(--teal);font-weight:600;}
@@ -1462,7 +1474,7 @@
     <small id="dateLine"></small>
   </div>
 
-  <div class="topbar-right" id="topbarRight"><span id="appVersion" class="app-version">v1.2.5</span></div>
+  <div class="topbar-right" id="topbarRight"><span id="appVersion" class="app-version">v1.2.6</span></div>
 </div>
 
 <!-- ================= SEARCH ================= -->
@@ -3059,7 +3071,7 @@ function renderMain(){
   titleInput.hidden = true;
   staticTitle.hidden = true;
 
-  topbarRight.innerHTML = '<span class="app-version">v1.2.5</span>';
+  topbarRight.innerHTML = '<span class="app-version">v1.2.6</span>';
 
   if(mainView === 'wagons'){
 
@@ -3090,7 +3102,7 @@ function renderMain(){
       staticTitle.textContent =
         'Вагоны';
 
-      topbarRight.innerHTML='<span class="app-version">v1.2.5</span>';
+      topbarRight.innerHTML='<span class="app-version">v1.2.6</span>';
       renderSidebar();
 
       return;
@@ -3337,7 +3349,7 @@ function renderMain(){
   }
 
   if(!topbarRight.querySelector('.app-version')){
-    topbarRight.insertAdjacentHTML('beforeend','<span class="app-version">v1.2.5</span>');
+    topbarRight.insertAdjacentHTML('beforeend','<span class="app-version">v1.2.6</span>');
   }
 
   renderSidebar();
@@ -7235,6 +7247,26 @@ function renderCurrentSchedule(){
       el.classList.remove('past','current','next','future');
       el.classList.add(st?._status||'future');
     });
+
+    const pastGroups=scheduleStops.querySelectorAll('[data-stop-group-index]');
+    let pastCount=0;
+    pastGroups.forEach(group=>{
+      const idx=Number(group.dataset.stopGroupIndex);
+      const st=routeStops[idx];
+      const isPast=st?._status==='past';
+      group.classList.toggle('past-collapsed',isPast && window.__schedulePastCollapsed!==false);
+      if(isPast)pastCount++;
+    });
+
+    const pastToggle=scheduleStops.querySelector('[data-past-toggle]');
+    if(pastToggle){
+      pastToggle.hidden=pastCount===0;
+      const label=pastToggle.querySelector('.past-label');
+      if(label)label.textContent='Прошедшие станции: '+pastCount;
+      pastToggle.classList.toggle('open',window.__schedulePastCollapsed===false);
+      const arrow=pastToggle.querySelector('.past-arrow');
+      if(arrow)arrow.textContent=window.__schedulePastCollapsed===false?'▲':'▼';
+    }
   };
   update();
   clearInterval(window.__scheduleTimer);
@@ -7285,18 +7317,42 @@ function renderCurrentSchedule(){
       const technicalBadge=st.technical
         ? '<span class="schedule-technical-badge">⚙ Техническая</span>'
         : '';
-      return dayHeading+zoneHeading+
+      return '<div class="schedule-stop-group" data-stop-group-index="'+i+'">'+
+        dayHeading+zoneHeading+
         '<div class="schedule-stop future" data-stop-index="'+i+'">'+
           '<div>'+escapeHtml(st.name)+technicalBadge+'</div>'+
           '<div class="mono">'+escapeHtml(st.arrival||'—')+'</div>'+
           '<div class="mono">'+escapeHtml(stand||'—')+'</div>'+
           '<div class="mono">'+escapeHtml(st.departure||'—')+'</div>'+
-        '</div>'+segment;
+        '</div>'+segment+
+        '</div>';
     }).join('');
+
+    window.__schedulePastCollapsed=true;
 
     scheduleStops.innerHTML=
       '<div class="schedule-stop schedule-stop-head"><div>Остановка</div><div>Прибытие</div><div>Стоянка</div><div>Отправление</div></div>'+
+      '<button type="button" class="schedule-past-toggle" data-past-toggle>'+
+        '<span class="past-label">Прошедшие станции</span>'+
+        '<span class="past-arrow">▼</span>'+
+      '</button>'+
       rows;
+
+    const pastToggle=scheduleStops.querySelector('[data-past-toggle]');
+    pastToggle.addEventListener('click',()=>{
+      window.__schedulePastCollapsed=!window.__schedulePastCollapsed;
+      pastToggle.classList.toggle('open',window.__schedulePastCollapsed===false);
+      pastToggle.querySelector('.past-arrow').textContent=
+        window.__schedulePastCollapsed===false?'▲':'▼';
+      scheduleStops.querySelectorAll('[data-stop-group-index]').forEach(group=>{
+        const idx=Number(group.dataset.stopGroupIndex);
+        const st=routeStops[idx];
+        group.classList.toggle(
+          'past-collapsed',
+          st?._status==='past' && window.__schedulePastCollapsed
+        );
+      });
+    });
 
     // После открытия расписания сразу показываем актуальную остановку.
     const activeStop=scheduleStops.querySelector('.schedule-stop.current, .schedule-stop.next');
