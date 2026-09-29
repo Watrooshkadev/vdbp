@@ -1462,7 +1462,7 @@
     <small id="dateLine"></small>
   </div>
 
-  <div class="topbar-right" id="topbarRight"><span id="appVersion" class="app-version">v1.2.4</span></div>
+  <div class="topbar-right" id="topbarRight"><span id="appVersion" class="app-version">v1.2.5</span></div>
 </div>
 
 <!-- ================= SEARCH ================= -->
@@ -3059,7 +3059,7 @@ function renderMain(){
   titleInput.hidden = true;
   staticTitle.hidden = true;
 
-  topbarRight.innerHTML = '<span class="app-version">v1.2.4</span>';
+  topbarRight.innerHTML = '<span class="app-version">v1.2.5</span>';
 
   if(mainView === 'wagons'){
 
@@ -3090,7 +3090,7 @@ function renderMain(){
       staticTitle.textContent =
         'Вагоны';
 
-      topbarRight.innerHTML='<span class="app-version">v1.2.4</span>';
+      topbarRight.innerHTML='<span class="app-version">v1.2.5</span>';
       renderSidebar();
 
       return;
@@ -3337,7 +3337,7 @@ function renderMain(){
   }
 
   if(!topbarRight.querySelector('.app-version')){
-    topbarRight.insertAdjacentHTML('beforeend','<span class="app-version">v1.2.4</span>');
+    topbarRight.insertAdjacentHTML('beforeend','<span class="app-version">v1.2.5</span>');
   }
 
   renderSidebar();
@@ -6698,10 +6698,12 @@ function parseCopiedYandexStops(raw){
       i++;
       continue;
     }
-    const localTz=name.match(/^местное\s+время\s+мск\s*([+-])\s*(\d+)\s*ч/i);
+    // Яндекс может присылать пояс как «МСК +1 ч» или «МСК +1»,
+    // а не только «Местное время МСК +1 ч».
+    const localTz=name.match(/^(?:местное\s+время\s+)?мск\s*([+-])\s*(\d+)\s*ч(?:ас(?:а|ов)?)?$/i);
     if(localTz){
       currentTimezoneOffset=180+(localTz[1]==='-'?-1:1)*Number(localTz[2])*60;
-      currentTimezoneLabel='Местное время · МСК '+(localTz[1]==='-'?'-':'+')+Number(localTz[2])+' ч';
+      currentTimezoneLabel='МСК '+(localTz[1]==='-'?'-':'+')+Number(localTz[2])+' ч';
       i++;
       continue;
     }
@@ -7011,7 +7013,7 @@ function scheduleStopDate(stop,baseDate,timezone){
 function scheduleStationOffsetMinutes(stop){
   if(!stop)return 180;
   const label=String(stop.timezoneLabel||'').trim().toLowerCase();
-  const local=label.match(/мск\s*([+-])\s*(\d+)\s*ч/i);
+  const local=label.match(/мск\s*([+-])\s*(\d+)\s*ч?/i);
   if(local){
     return 180+(local[1]==='-'?-1:1)*Number(local[2])*60;
   }
@@ -7051,17 +7053,42 @@ function renderCurrentSchedule(){
     if(x.sourceUrl)window.open(x.sourceUrl,'_blank');
   });
   const routeStops=Array.isArray(x.stops)?x.stops:[];
-  // Для поездов, сохранённых до появления отметки технических станций,
-  // восстанавливаем признак из исходного текста Яндекса.
-  if(x.rawStopsText && routeStops.length && routeStops.some(st=>typeof st.technical==='undefined')){
+  // Обновляем сохранённые остановки из исходного текста Яндекса.
+  // Это также мигрирует старые расписания: раньше строка «МСК +1 ч»
+  // могла пропускаться без смены часового пояса, из-за чего перегон
+  // становился длиннее ровно на 1 час.
+  if(x.rawStopsText && routeStops.length){
     const reparsed=parseCopiedYandexStops(x.rawStopsText);
+    let changed=false;
+
     routeStops.forEach((st,i)=>{
-      if(typeof st.technical==='undefined'){
-        st.technical=!!reparsed[i]?.technical;
+      const fresh=reparsed[i];
+      if(!fresh) return;
+
+      if(st.technical!==fresh.technical){
+        st.technical=fresh.technical;
+        changed=true;
+      }
+
+      if(
+        Number(st.timezoneOffsetMinutes)!==Number(fresh.timezoneOffsetMinutes) ||
+        String(st.timezoneLabel||'')!==String(fresh.timezoneLabel||'') ||
+        Number(st.dayOffset||0)!==Number(fresh.dayOffset||0) ||
+        String(st.dayLabel||'')!==String(fresh.dayLabel||'')
+      ){
+        st.timezoneOffsetMinutes=fresh.timezoneOffsetMinutes;
+        st.timezoneLabel=fresh.timezoneLabel;
+        st.dayOffset=fresh.dayOffset;
+        st.dayLabel=fresh.dayLabel;
+        changed=true;
       }
     });
-    state.schedules=schedules;
-    saveState();
+
+    if(changed){
+      x.timezoneLabel=reparsed.timezoneLabel||x.timezoneLabel||'Московское время';
+      state.schedules=schedules;
+      saveState();
+    }
   }
 
   const nowEl=document.getElementById('scheduleNowTimer');
