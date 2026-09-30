@@ -8904,17 +8904,17 @@ if('serviceWorker' in navigator){
     for(let i=0;i<stops.length;i++){
       const st=stops[i],d=dates[i],next=stops[i+1],nd=dates[i+1];
       if(d.arrival && d.departure && now>=d.arrival && now<d.departure){
-        return {type:'stop',route:'На станции · '+st.name,detail:'До отправления '+formatDuration(d.departure-now)+' · '+(st.departure||'—'),station:st.name,departure:d.departure};
+        return {type:'stop',route:(x.fromName||'—')+' → '+(x.toName||'—'),detail:'На станции · '+st.name+' · до отправления '+formatDuration(d.departure-now)+' · '+(st.departure||'—'),station:st.name,departure:d.departure};
       }
       if(d.departure && nd?.arrival && now>=d.departure && now<nd.arrival){
-        return {type:'travel',route:'В пути → '+next.name,detail:'До станции '+formatDuration(nd.arrival-now)+' · стоянка '+(next.stopTime||'—')+' · отправление '+(next.departure||'—'),station:next.name,arrival:nd.arrival,departure:dates[i+1]?.departure};
+        return {type:'travel',route:(x.fromName||'—')+' → '+(x.toName||'—'),detail:'В пути → '+next.name+' · до станции '+formatDuration(nd.arrival-now)+' · стоянка '+(next.stopTime||'—')+' · отправление '+(next.departure||'—'),station:next.name,arrival:nd.arrival,departure:dates[i+1]?.departure};
       }
       if(d.arrival && now<d.arrival){
-        return {type:'travel',route:'В пути → '+st.name,detail:'До станции '+formatDuration(d.arrival-now)+' · стоянка '+(st.stopTime||'—')+' · отправление '+(st.departure||'—'),station:st.name,arrival:d.arrival,departure:d.departure};
+        return {type:'travel',route:(x.fromName||'—')+' → '+(x.toName||'—'),detail:'В пути → '+st.name+' · до станции '+formatDuration(d.arrival-now)+' · стоянка '+(st.stopTime||'—')+' · отправление '+(st.departure||'—'),station:st.name,arrival:d.arrival,departure:d.departure};
       }
     }
     const last=stops[stops.length-1],ld=dates[dates.length-1];
-    if(ld?.arrival && now>=ld.arrival)return {type:'done',route:'Маршрут завершён',detail:'Прибытие · '+last.name};
+    if(ld?.arrival && now>=ld.arrival)return null;
     return null;
   }
 
