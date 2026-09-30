@@ -1130,14 +1130,60 @@
   .schedule-fields{display:grid;grid-template-columns:1fr 1fr 170px;gap:8px;}
   .schedule-fields input,.schedule-fields select{width:100%;background:var(--surface-2);border:1px solid var(--line);border-radius:7px;color:var(--ink);padding:9px 10px;font:inherit;}
   .schedule-mobile-field{display:none;}
-  .schedule-top-status{min-width:0;}
-  .schedule-top-status .sts-dot{width:8px;height:8px;border-radius:50%;background:currentColor;flex:0 0 auto;}
-  .schedule-top-status .sts-main{min-width:0;overflow:hidden;text-overflow:ellipsis;}
-  .schedule-top-status .sts-train{font-weight:800;color:var(--ink);}
-  .schedule-top-status .sts-state{font-weight:700;}
-  .app-version{appearance:none;border:0;background:transparent;font-size:10px;color:var(--ink-muted);font-family:ui-monospace,monospace;margin-left:4px;padding:5px 2px;white-space:nowrap;cursor:pointer;}
+  .schedule-top-status{
+    width:clamp(230px,32vw,330px);
+    min-width:0;
+    padding:5px 8px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    background:var(--surface);
+    line-height:1.15;
+    overflow:hidden;
+  }
+  .schedule-top-status .sts-route{
+    display:block;
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    color:var(--ink);
+    font-size:10px;
+    font-weight:700;
+  }
+  .schedule-top-status .sts-detail{
+    display:block;
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    color:var(--ink-muted);
+    font-size:9px;
+    margin-top:2px;
+  }
+  .schedule-top-status.travel{border-color:var(--teal);}
+  .schedule-top-status.stop,.schedule-top-status.wait{border-color:var(--amber-dim);}
+  .schedule-top-status.done{border-color:var(--teal);}
+  .app-version{
+    appearance:none;
+    border:0;
+    background:transparent;
+    font-size:10px;
+    color:var(--ink-muted);
+    font-family:ui-monospace,monospace;
+    margin-left:2px;
+    padding:5px 1px;
+    white-space:nowrap;
+    cursor:pointer;
+  }
   .app-version:hover{color:var(--ink);}
   .app-version:active{color:var(--amber);}
+  @media(max-width:600px){
+    .topbar{gap:6px;padding-left:10px;padding-right:10px;}
+    .schedule-top-status{width:min(48vw,285px);padding:4px 6px;}
+    .schedule-top-status .sts-route{font-size:9px;}
+    .schedule-top-status .sts-detail{font-size:8px;}
+    .app-version{font-size:9px;margin-left:0;}
+  }
   .schedule-stops-input{width:100%;min-height:260px;resize:vertical;background:var(--surface-2);border:1px solid var(--line);border-radius:7px;color:var(--ink);padding:10px 12px;font:13px/1.5 ui-monospace,monospace;margin-top:10px;}
   .schedule-stops-input:focus{outline:none;border-color:var(--amber-dim);}
   .schedule-parse-info{font-size:11px;color:var(--ink-muted);line-height:1.45;margin-top:6px;}
@@ -1605,7 +1651,7 @@
     <small id="dateLine"></small>
   </div>
 
-  <div class="topbar-right" id="topbarRight"><button id="appVersion" class="app-version" type="button" title="Техническая информация">v1.2.9</button></div>
+  <div class="topbar-right" id="topbarRight"><button id="appVersion" class="app-version" type="button" title="Техническая информация">v1.3.0</button></div>
 </div>
 
 <!-- ================= SEARCH ================= -->
@@ -3202,7 +3248,7 @@ function renderMain(){
   titleInput.hidden = true;
   staticTitle.hidden = true;
 
-  topbarRight.innerHTML = '<button id="appVersion" class="app-version" type="button" title="Техническая информация">v1.2.9</button>';
+  topbarRight.innerHTML = '<button id="appVersion" class="app-version" type="button" title="Техническая информация">v1.3.0</button>';
 
   if(mainView === 'wagons'){
 
@@ -3233,7 +3279,7 @@ function renderMain(){
       staticTitle.textContent =
         'Вагоны';
 
-      topbarRight.innerHTML='<button id="appVersion" class="app-version" type="button" title="Техническая информация">v1.2.9</button>';
+      topbarRight.innerHTML='<button id="appVersion" class="app-version" type="button" title="Техническая информация">v1.3.0</button>';
       renderSidebar();
 
       return;
@@ -3480,7 +3526,7 @@ function renderMain(){
   }
 
   if(!topbarRight.querySelector('.app-version')){
-    topbarRight.insertAdjacentHTML('beforeend','<button id="appVersion" class="app-version" type="button" title="Техническая информация">v1.2.9</button>');
+    topbarRight.insertAdjacentHTML('beforeend','<button id="appVersion" class="app-version" type="button" title="Техническая информация">v1.3.0</button>');
   }
 
   renderSidebar();
@@ -8939,8 +8985,8 @@ if('serviceWorker' in navigator){
 
   function getSchedule(){
     const list=Array.isArray(schedules)?schedules:[];
-    if(!list.length)return null;
-    return list.find(s=>s.id===currentScheduleId)||list[0];
+    if(!list.length || !currentScheduleId)return null;
+    return list.find(s=>s.id===currentScheduleId)||null;
   }
 
   function getLiveStatus(x,now){
@@ -8958,7 +9004,7 @@ if('serviceWorker' in navigator){
     for(let i=0;i<stops.length;i++){
       const st=stops[i],d=dates[i],next=stops[i+1],nd=dates[i+1];
       if(d.arrival && d.departure && now>=d.arrival && now<d.departure){
-        return {type:'stop',route:(x.fromName||'—')+' → '+(x.toName||'—'),detail:'📍 '+st.name+' · отправление через '+formatDuration(d.departure-now)+' · '+(st.departure||'—'),station:st.name,departure:d.departure};
+        return {type:'stop',route:(x.fromName||'—')+' → '+(x.toName||'—'),detail:'📍 '+st.name+' · стоим '+formatDuration(d.departure-now)+' · отправление '+(st.departure||'—'),station:st.name,departure:d.departure};
       }
       if(d.departure && nd?.arrival && now>=d.departure && now<nd.arrival){
         return {type:'travel',route:(x.fromName||'—')+' → '+(x.toName||'—'),detail:'🚆 '+next.name+' · до остановки '+formatDuration(nd.arrival-now)+' · стоянка '+(next.stopTime||'—')+' · отправление '+(next.departure||'—'),station:next.name,arrival:nd.arrival,departure:dates[i+1]?.departure};
@@ -8985,7 +9031,7 @@ if('serviceWorker' in navigator){
       right.insertBefore(el,version);
     }
 
-    const x=getSchedule();
+    const x=(mainView==='schedule') ? getSchedule() : null;
     const live=x ? getLiveStatus(x,new Date()) : null;
 
     if(!live){
@@ -9021,8 +9067,9 @@ if('serviceWorker' in navigator){
     const stops=Array.isArray(x.stops)?x.stops:[];
     const current=stops.find(s=>s._status==='current');
     const next=stops.find(s=>s._status==='next');
+    const live=getLiveStatus(x,new Date());
     body.innerHTML='<div class="tech-grid">'+
-      '<div><span>Версия</span><b>v1.2.9</b></div>'+
+      '<div><span>Версия</span><b>v1.3.0</b></div>'+
       '<div><span>Поезд</span><b>'+escapeHtml(x.trainNumber||'—')+'</b></div>'+
       '<div><span>Маршрут</span><b>'+escapeHtml((x.fromName||'—')+' → '+(x.toName||'—'))+'</b></div>'+
       '<div><span>Дата</span><b>'+escapeHtml(x.date||'—')+'</b></div>'+
@@ -9030,6 +9077,7 @@ if('serviceWorker' in navigator){
       '<div><span>Станций</span><b>'+stops.length+'</b></div>'+
       '<div><span>Текущая</span><b>'+escapeHtml(current?.name||'—')+'</b></div>'+
       '<div><span>Следующая</span><b>'+escapeHtml(next?.name||'—')+'</b></div>'+
+      '<div><span>Статус</span><b>'+escapeHtml(live?.detail||'—')+'</b></div>'+
       '</div><div class="tech-source">ID: '+escapeHtml(String(x.id||'—'))+'</div>';
   }
   document.addEventListener('click',e=>{const version=e.target.closest&&e.target.closest('.app-version');if(version){e.preventDefault();openTechnicalInfo();}});
