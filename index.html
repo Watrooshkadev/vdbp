@@ -3148,7 +3148,7 @@ function renderMain(){
   titleInput.hidden = true;
   staticTitle.hidden = true;
 
-  topbarRight.innerHTML = '<button class="app-version" type="button" title="Техническая информация">v1.2.8</button>';
+  topbarRight.innerHTML = '<button id="appVersion" class="app-version" type="button" title="Техническая информация">v1.2.8</button>';
 
   if(mainView === 'wagons'){
 
@@ -3179,7 +3179,7 @@ function renderMain(){
       staticTitle.textContent =
         'Вагоны';
 
-      topbarRight.innerHTML='<button class="app-version" type="button" title="Техническая информация">v1.2.8</button>';
+      topbarRight.innerHTML='<button id="appVersion" class="app-version" type="button" title="Техническая информация">v1.2.8</button>';
       renderSidebar();
 
       return;
@@ -3426,7 +3426,7 @@ function renderMain(){
   }
 
   if(!topbarRight.querySelector('.app-version')){
-    topbarRight.insertAdjacentHTML('beforeend','<button class="app-version" type="button" title="Техническая информация">v1.2.8</button>');
+    topbarRight.insertAdjacentHTML('beforeend','<button id="appVersion" class="app-version" type="button" title="Техническая информация">v1.2.8</button>');
   }
 
   renderSidebar();
