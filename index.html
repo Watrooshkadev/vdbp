@@ -1515,6 +1515,60 @@
     }
   }
 </style>
+<style id="schedule-status-topbar-fix-css">
+/* ---------- Compact live train status in the header ---------- */
+.topbar:has(#topbarScheduleStatus:not([hidden])) .topbar-title-wrap{
+  flex:0 1 clamp(125px,24vw,220px);
+}
+.topbar-right{
+  flex:1;
+  min-width:0;
+  justify-content:flex-end;
+}
+.schedule-top-status{
+  flex:1 1 auto;
+  width:auto;
+  max-width:360px;
+  min-width:0;
+  padding:5px 9px;
+  border-radius:9px;
+  gap:2px;
+}
+.schedule-top-status .sts-route{
+  font-size:10px;
+  line-height:1.2;
+}
+.schedule-top-status .sts-detail{
+  font-size:9px;
+  line-height:1.25;
+}
+.schedule-top-status.travel .sts-detail{color:var(--teal)}
+.schedule-top-status.stop .sts-detail{color:var(--amber)}
+.schedule-top-status.wait .sts-detail{color:var(--amber)}
+@media(max-width:600px){
+  .topbar:has(#topbarScheduleStatus:not([hidden])) .topbar-title-wrap{
+    flex:0 1 112px;
+    width:112px;
+  }
+  .topbar:has(#topbarScheduleStatus:not([hidden])) .topbar-right{
+    gap:4px;
+  }
+  .schedule-top-status{
+    max-width:none;
+    padding:4px 7px;
+  }
+  .schedule-top-status .sts-route{
+    font-size:9px;
+  }
+  .schedule-top-status .sts-detail{
+    font-size:8px;
+  }
+  .app-version{
+    font-size:9px;
+    min-width:34px;
+  }
+}
+</style>
 <style id="schedule-status-notify-css">
 .schedule-top-status{display:flex;flex-direction:column;justify-content:center;gap:1px;width:clamp(150px,34vw,285px);min-width:0;padding:4px 7px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);font-size:9px;line-height:1.15;color:var(--ink-muted);white-space:normal;overflow:hidden}
 .schedule-top-status .sts-route{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink);font-size:10px;font-weight:700}
@@ -1551,7 +1605,7 @@
     <small id="dateLine"></small>
   </div>
 
-  <div class="topbar-right" id="topbarRight"><button id="appVersion" class="app-version" type="button" title="Техническая информация">v1.2.8</button></div>
+  <div class="topbar-right" id="topbarRight"><button id="appVersion" class="app-version" type="button" title="Техническая информация">v1.2.9</button></div>
 </div>
 
 <!-- ================= SEARCH ================= -->
@@ -3148,7 +3202,7 @@ function renderMain(){
   titleInput.hidden = true;
   staticTitle.hidden = true;
 
-  topbarRight.innerHTML = '<button id="appVersion" class="app-version" type="button" title="Техническая информация">v1.2.8</button>';
+  topbarRight.innerHTML = '<button id="appVersion" class="app-version" type="button" title="Техническая информация">v1.2.9</button>';
 
   if(mainView === 'wagons'){
 
@@ -3179,7 +3233,7 @@ function renderMain(){
       staticTitle.textContent =
         'Вагоны';
 
-      topbarRight.innerHTML='<button id="appVersion" class="app-version" type="button" title="Техническая информация">v1.2.8</button>';
+      topbarRight.innerHTML='<button id="appVersion" class="app-version" type="button" title="Техническая информация">v1.2.9</button>';
       renderSidebar();
 
       return;
@@ -3426,7 +3480,7 @@ function renderMain(){
   }
 
   if(!topbarRight.querySelector('.app-version')){
-    topbarRight.insertAdjacentHTML('beforeend','<button id="appVersion" class="app-version" type="button" title="Техническая информация">v1.2.8</button>');
+    topbarRight.insertAdjacentHTML('beforeend','<button id="appVersion" class="app-version" type="button" title="Техническая информация">v1.2.9</button>');
   }
 
   renderSidebar();
@@ -8899,18 +8953,18 @@ if('serviceWorker' in navigator){
     const first=stops[0],fd=dates[0]?.departure;
     if(fd && now<fd){
       const boarding=new Date(fd.getTime()-30*60000);
-      return {type:now<boarding?'wait':'stop',route:(x.fromName||first.name||'—')+' → '+(x.toName||'—'),detail:now<boarding?'До посадки '+formatDuration(boarding-now):'До отправления '+formatDuration(fd-now)+' · '+first.departure};
+      return {type:now<boarding?'wait':'stop',route:(x.fromName||first.name||'—')+' → '+(x.toName||'—'),detail:now<boarding?'Посадка через '+formatDuration(boarding-now)+' · отправление '+first.departure:'На старте · до отправления '+formatDuration(fd-now)+' · '+first.departure};
     }
     for(let i=0;i<stops.length;i++){
       const st=stops[i],d=dates[i],next=stops[i+1],nd=dates[i+1];
       if(d.arrival && d.departure && now>=d.arrival && now<d.departure){
-        return {type:'stop',route:(x.fromName||'—')+' → '+(x.toName||'—'),detail:'На станции · '+st.name+' · до отправления '+formatDuration(d.departure-now)+' · '+(st.departure||'—'),station:st.name,departure:d.departure};
+        return {type:'stop',route:(x.fromName||'—')+' → '+(x.toName||'—'),detail:'📍 '+st.name+' · отправление через '+formatDuration(d.departure-now)+' · '+(st.departure||'—'),station:st.name,departure:d.departure};
       }
       if(d.departure && nd?.arrival && now>=d.departure && now<nd.arrival){
-        return {type:'travel',route:(x.fromName||'—')+' → '+(x.toName||'—'),detail:'В пути → '+next.name+' · до станции '+formatDuration(nd.arrival-now)+' · стоянка '+(next.stopTime||'—')+' · отправление '+(next.departure||'—'),station:next.name,arrival:nd.arrival,departure:dates[i+1]?.departure};
+        return {type:'travel',route:(x.fromName||'—')+' → '+(x.toName||'—'),detail:'🚆 '+next.name+' · до остановки '+formatDuration(nd.arrival-now)+' · стоянка '+(next.stopTime||'—')+' · отправление '+(next.departure||'—'),station:next.name,arrival:nd.arrival,departure:dates[i+1]?.departure};
       }
       if(d.arrival && now<d.arrival){
-        return {type:'travel',route:(x.fromName||'—')+' → '+(x.toName||'—'),detail:'В пути → '+st.name+' · до станции '+formatDuration(d.arrival-now)+' · стоянка '+(st.stopTime||'—')+' · отправление '+(st.departure||'—'),station:st.name,arrival:d.arrival,departure:d.departure};
+        return {type:'travel',route:(x.fromName||'—')+' → '+(x.toName||'—'),detail:'🚆 '+st.name+' · до остановки '+formatDuration(d.arrival-now)+' · стоянка '+(st.stopTime||'—')+' · отправление '+(st.departure||'—'),station:st.name,arrival:d.arrival,departure:d.departure};
       }
     }
     const last=stops[stops.length-1],ld=dates[dates.length-1];
@@ -8943,7 +8997,8 @@ if('serviceWorker' in navigator){
     el.hidden=false;
     el.className='schedule-top-status '+live.type;
     el.title=(x.trainNumber?'Поезд '+x.trainNumber+' · ':'')+(live.route||'')+' · '+(live.detail||'');
-    el.innerHTML='<span class="sts-route">'+(x.trainNumber?'№'+escapeHtml(x.trainNumber)+' · ':'')+escapeHtml(live.route||'')+'</span>'+
+    el.setAttribute('aria-live','polite');
+    el.innerHTML='<span class="sts-route">'+escapeHtml(live.route||'')+'</span>'+
       '<span class="sts-detail">'+escapeHtml(live.detail||'')+'</span>';
   }
 
@@ -8967,7 +9022,7 @@ if('serviceWorker' in navigator){
     const current=stops.find(s=>s._status==='current');
     const next=stops.find(s=>s._status==='next');
     body.innerHTML='<div class="tech-grid">'+
-      '<div><span>Версия</span><b>v1.2.8</b></div>'+
+      '<div><span>Версия</span><b>v1.2.9</b></div>'+
       '<div><span>Поезд</span><b>'+escapeHtml(x.trainNumber||'—')+'</b></div>'+
       '<div><span>Маршрут</span><b>'+escapeHtml((x.fromName||'—')+' → '+(x.toName||'—'))+'</b></div>'+
       '<div><span>Дата</span><b>'+escapeHtml(x.date||'—')+'</b></div>'+
