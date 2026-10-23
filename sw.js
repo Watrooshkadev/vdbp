@@ -1,4 +1,4 @@
-const CACHE = 'vagony-v22';
+const CACHE = 'vagony-v23';
 const ASSETS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
