@@ -7248,7 +7248,7 @@ function renderCurrentSchedule(){
     routeStops.forEach((st,i)=>{
       st._status='future';
       const arrival=scheduleZonedDate(x.date,st.arrival,x.timezone||'Europe/Moscow',Number(st.dayOffset)||0,(st.timezoneOffsetMinutes==null || (Number(st.timezoneOffsetMinutes)===0 && /московское время/i.test(String(st.timezoneLabel||''))) ? null : Number(st.timezoneOffsetMinutes)));
-      const departure=scheduleZonedDate(x.date,st.departure,x.timezone||'Europe/Moscow',Number(st.dayOffset)||0,(st.timezoneOffsetMinutes==null || (Number(st.timezoneOffsetMinutes)===0 && /московское время/i.test(String(st.timezoneLabel||''))) ? null : Number(st.timezoneOffsetMinutes)));
+      const departure=scheduleZonedDate(x.date,st.departure,x.timezone||'Europe/Moscow',Number(st.departureDayOffset??st.dayOffset)||0,(st.timezoneOffsetMinutes==null || (Number(st.timezoneOffsetMinutes)===0 && /московское время/i.test(String(st.timezoneLabel||''))) ? null : Number(st.timezoneOffsetMinutes)));
       st._arrival=arrival;
       st._departure=departure;
     });
