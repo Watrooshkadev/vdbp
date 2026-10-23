@@ -1547,7 +1547,7 @@
     <small id="dateLine"></small>
   </div>
 
-  <div class="topbar-right" id="topbarRight"><span id="appVersion" class="app-version">v1.3.0</span></div>
+  <div class="topbar-right" id="topbarRight"><span id="appVersion" class="app-version">v1.3.1</span></div>
 </div>
 
 <!-- ================= SEARCH ================= -->
@@ -6738,7 +6738,9 @@ function isScheduleDuration(v){
 }
 
 function isScheduleDateHeading(v){
-  return /^\d{1,2}\s+(?:января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)(?:\s+\d{4})?$/i.test(String(v||'').trim());
+  // Яндекс копирует даты и полным названием месяца (24 октября), и сокращённо (23 окт.).
+  // Короткие даты под временем прибытия — подписи к времени, а не названия станций.
+  return /^\d{1,2}\s+(?:января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря|янв\.?|февр?\.?|марта?\.?|апр\.?|мая?\.?|июня?\.?|июля?\.?|авг\.?|сент\.?|окт\.?|нояб?\.?|дек\.?)(?:\s+\d{4})?$/i.test(String(v||'').trim());
 }
 
 function isScheduleNoise(v){
@@ -8845,7 +8847,7 @@ if('serviceWorker' in navigator){
     () => {
 
       navigator.serviceWorker
-        .register('sw.js?v=21')
+        .register('sw.js?v=22')
         .catch(() => {});
 
     }
