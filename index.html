@@ -6864,7 +6864,7 @@ function parseCopiedYandexStops(raw){
     const following=[];
     let j=i+1;
     let departureDayOffset=stopDayOffset;
-    while(j<lines.length && following.length<3){
+    while(j<lines.length && (following.length<3 || isScheduleDateHeading(lines[j]))){
       const v=lines[j];
 
       // Даты могут быть вставлены между временем прибытия и стоянкой/отправлением.
