@@ -7439,8 +7439,8 @@ function renderCurrentSchedule(){
       let segment='';
       if(i<routeStops.length-1){
         const next=routeStops[i+1];
-        const a=scheduleZonedDate(x.date,st.departure,x.timezone||'Europe/Moscow',Number(st.dayOffset)||0,scheduleStationOffsetMinutes(st));
-        const b=scheduleZonedDate(x.date,next.arrival,x.timezone||'Europe/Moscow',Number(next.dayOffset)||0,scheduleStationOffsetMinutes(next));
+        const a=scheduleZonedDate(x.date,st.departure,x.timezone||'Europe/Moscow',Number(st.departureDayOffset??st.dayOffset)||0,scheduleStationOffsetMinutes(st));
+        const b=scheduleZonedDate(x.date,next.arrival,x.timezone||'Europe/Moscow',Number(next.arrivalDayOffset??next.dayOffset)||0,scheduleStationOffsetMinutes(next));
         if(a&&b){
           const mins=Math.max(0,Math.round((b-a)/60000));
           const travel=mins>=60?Math.floor(mins/60)+' ч'+(mins%60?' '+mins%60+' мин':''):mins+' мин';
