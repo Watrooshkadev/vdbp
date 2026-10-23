@@ -1547,7 +1547,7 @@
     <small id="dateLine"></small>
   </div>
 
-  <div class="topbar-right" id="topbarRight"><span id="appVersion" class="app-version">v1.3.1</span></div>
+  <div class="topbar-right" id="topbarRight"><span id="appVersion" class="app-version">v1.3.2</span></div>
 </div>
 
 <!-- ================= SEARCH ================= -->
@@ -6780,8 +6780,25 @@ function parseCopiedYandexStops(raw){
     const name=lines[i];
 
     if(isScheduleDateHeading(name)){
+      // В копируемом расписании дата может стоять прямо под временем прибытия/отправления
+      // (например, «22:52», «23 окт.», «1 ч 26 мин», «00:18», «24 окт.»).
+      // Повтор той же даты не должен создавать новую сутки/станцию.
+      const normalizeScheduleDateLabel=value=>{
+        let v=String(value||'').trim().toLowerCase().replace(/\\./g,'').replace(/\\s+/g,' ');
+        const months={
+          'янв':'января','января':'января','фев':'февраля','февр':'февраля','февраля':'февраля',
+          'мар':'марта','марта':'марта','апр':'апреля','апреля':'апреля','май':'мая','мая':'мая',
+          'июн':'июня','июня':'июня','июл':'июля','июля':'июля','авг':'августа','августа':'августа',
+          'сен':'сентября','сент':'сентября','сентября':'сентября','окт':'октября','октября':'октября',
+          'ноя':'ноября','нояб':'ноября','ноября':'ноября','дек':'декабря','декабря':'декабря'
+        };
+        const m=v.match(/^(\\d{1,2})\\s+([^\\s]+)(?:\\s+(\\d{4}))?$/);
+        return m ? m[1]+' '+(months[m[2]]||m[2])+(m[3]?' '+m[3]:'') : v;
+      };
+      const previousDate=normalizeScheduleDateLabel(currentDayLabel);
+      const nextDate=normalizeScheduleDateLabel(name);
+      if(currentDayLabel && nextDate!==previousDate && result.length) currentDay++;
       currentDayLabel=name;
-      if(result.length) currentDay++;
       i++;
       continue;
     }
@@ -8847,7 +8864,7 @@ if('serviceWorker' in navigator){
     () => {
 
       navigator.serviceWorker
-        .register('sw.js?v=22')
+        .register('sw.js?v=23')
         .catch(() => {});
 
     }
