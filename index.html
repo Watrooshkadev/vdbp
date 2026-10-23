@@ -6859,10 +6859,39 @@ function parseCopiedYandexStops(raw){
       continue;
     }
 
+    const stopDayOffset=currentDay;
+    const stopDayLabel=currentDayLabel;
     const following=[];
     let j=i+1;
+    let departureDayOffset=stopDayOffset;
     while(j<lines.length && following.length<3){
       const v=lines[j];
+
+      // Даты могут быть вставлены между временем прибытия и стоянкой/отправлением.
+      // Повтор той же даты (например, «23 окт.») не меняет день, а «24 окт.»
+      // переводит последующие времена на следующие сутки.
+      if(isScheduleDateHeading(v)){
+        const norm=value=>String(value||'').toLowerCase().replace(/\\./g,'').replace(/\\s+/g,' ').trim()
+          .replace(/^(\\d{1,2})\\s+окт$/, '$1 октября')
+          .replace(/^(\\d{1,2})\\s+нояб?$/, '$1 ноября')
+          .replace(/^(\\d{1,2})\\s+сент?$/, '$1 сентября')
+          .replace(/^(\\d{1,2})\\s+авг$/, '$1 августа')
+          .replace(/^(\\d{1,2})\\s+июн$/, '$1 июня')
+          .replace(/^(\\d{1,2})\\s+июл$/, '$1 июля')
+          .replace(/^(\\d{1,2})\\s+апр$/, '$1 апреля')
+          .replace(/^(\\d{1,2})\\s+февр?$/, '$1 февраля')
+          .replace(/^(\\d{1,2})\\s+янв$/, '$1 января')
+          .replace(/^(\\d{1,2})\\s+дек$/, '$1 декабря');
+        if(currentDayLabel && norm(v)!==norm(currentDayLabel)){
+          currentDay++;
+          currentDayLabel=v;
+        }else if(!currentDayLabel){
+          currentDayLabel=v;
+        }
+        departureDayOffset=currentDay;
+        j++;
+        continue;
+      }
 
       // У начальной станции Яндекс показывает «—» вместо прибытия/стоянки.
       if((v==='—' || v==='–' || v==='-') && following.length===0){
@@ -6876,8 +6905,7 @@ function parseCopiedYandexStops(raw){
         continue;
       }
 
-      // Любая текстовая строка после станции означает начало следующего пункта.
-      // Поэтому дата, километры и «МСК +1 ч» не забирают время следующей станции.
+      // Не относящиеся к временам подписи завершают блок остановки.
       break;
     }
     if(following.length){
@@ -6899,7 +6927,7 @@ function parseCopiedYandexStops(raw){
         else arrival=following[0];
       }
 
-      result.push({name:station,technical,arrival,departure,stopTime,dayOffset:currentDay,dayLabel:currentDayLabel,timezoneOffsetMinutes:currentTimezoneOffset,timezoneLabel:currentTimezoneLabel});
+      result.push({name:station,technical,arrival,departure,stopTime,dayOffset:stopDayOffset,arrivalDayOffset:stopDayOffset,departureDayOffset,dayLabel:stopDayLabel,timezoneOffsetMinutes:currentTimezoneOffset,timezoneLabel:currentTimezoneLabel});
       i=j;
     }else{
       i++;
